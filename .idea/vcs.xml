@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$/backend" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/frontend" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/common" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/console" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/core" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/deps/Eigen3" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/deps/ExcelFormat" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/deps/xlnt" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms-release/desktop" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms/common" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scgms/core" vcs="Git" />
+  </component>
+</project>
