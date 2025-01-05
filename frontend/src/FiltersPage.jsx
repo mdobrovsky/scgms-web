@@ -11,8 +11,24 @@ function FiltersPage() {
     useEffect(() => {
         const fetchFilters = async () => {
             try {
-                const response = await axios.get('http://localhost:3000/simulation/filters');
-                setAvailableFilters(response.data.filters);
+                const response = await axios.get('http://127.0.0.1:5000/fetch_filters');
+
+                let filters = response.data.split("\n").filter(line => line.trim() !== "");
+
+                // Vytvoření pole dvojic {name, guid}
+                const parsedFilters = filters.map(filter => {
+                    const match = filter.match(/^(.*)\{([A-F0-9-]+)\}$/);
+                    if (match) {
+                        const name = match[1].trim(); // Jméno filtru
+                        const guid = match[2];       // GUID
+                        return { name, guid };
+                    }
+                    return null; // Pro případ, že by řádek nesplňoval formát
+                }).filter(item => item !== null); // Odstranění neplatných záznamů
+
+                console.log(parsedFilters);
+
+                setAvailableFilters(parsedFilters);
             } catch (error) {
                 console.error('Error fetching filters:', error);
             }
@@ -62,7 +78,7 @@ function FiltersPage() {
                             }`}
                             onClick={() => setSelectedFilterIndex(index)}
                         >
-                            {filter}
+                            {filter.name}
                         </div>
                     ))
                 ) : (
@@ -92,7 +108,7 @@ function FiltersPage() {
                         className="filter-item hoverable"
                         onClick={() => handleAddFilter(filter)}
                     >
-                        {filter}
+                        {filter.name}
                     </div>
                 ))}
             </div>

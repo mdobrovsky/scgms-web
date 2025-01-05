@@ -1,0 +1,4 @@
+/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/cmake-build-debug/CMakeFiles/scgms_wrapper.dir
+/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/cmake-build-debug/CMakeFiles/scgms_wrapper_debug.dir
+/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/cmake-build-debug/CMakeFiles/rebuild_cache.dir
