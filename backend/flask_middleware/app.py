@@ -6,11 +6,14 @@ app = Flask(__name__)
 CORS(app)
 
 
+@app.route('/load_lib')
+def load_lib():
+    return scgms_wrapper.load_scgms_lib()
+
+
 @app.route('/fetch_filters')
-def hello_world():  # put application's code here
-    scgms_wrapper.load_scgms_lib()
+def fetch_filters():
     return scgms_wrapper.list_available_filters()
-    # return "Hello World!"
 
 
 

@@ -35,28 +35,12 @@ std::wstring listAvailableFilters() {
     std::wstringstream output;
 
     for (const auto &filter : filterList) {
-        output << filter.description << GUID_To_WString(filter.id) << std::endl;
+        output << filter. << GUID_To_WString(filter.id) << std::endl;
     }
     return output.str();
 }
 
 
-int load_scgms_lib() {
-    if (!scgms::is_scgms_loaded()) {
-        std::cerr << "SCGMS library is not loaded. Attempting to load..." << std::endl;
-
-        std::wstring library_path = L"./scgms/libscgms.dylib";
-        scgms::set_base_path(library_path);
-
-        if (!scgms::is_scgms_loaded()) {
-            std::cerr << "Library loading failed!" << std::endl;
-            return 1;
-        }
-    }
-
-    std::cout << "SCGMS library loaded successfully." << std::endl;
-    return 0;
-}
 
 HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
     if (filter) {
@@ -72,21 +56,15 @@ HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
     return S_OK;
 }
 
-int execute() {
-    const std::wstring config_path = L"./testovaci_konfig.ini";
+int execute(const std::wstring& config_path) {
 
     // Load Configuration
     scgms::SPersistent_Filter_Chain_Configuration configuration;
     refcnt::Swstr_list errors;
 
-    //refcnt::WChar_Container_To_WString()
 
     if (Succeeded(configuration->Load_From_File(config_path.c_str(), errors.get()))) {
         std::cout << "Configuration loaded successfully." << std::endl;
-        // debug what is in the configuration
-
-        // Set variables (if required)
-        // Example: configuration->Set_Variable(L"parameter_name", L"value");
 
         // Execute the filter chain
         Global_Filter_Executor = scgms::SFilter_Executor{
@@ -131,11 +109,41 @@ std::string wstringToUtf8(const std::wstring& wstr) {
     return result;
 }
 
+/**
+ * API
+ * @return  0 if the library is loaded successfully, 1 otherwise
+ */
+std::string load_scgms_lib() {
+    if (!scgms::is_scgms_loaded()) {
+        std::cerr << "SCGMS library is not loaded. Attempting to load..." << std::endl;
+
+        std::wstring library_path = L"./scgms/libscgms.dylib";
+        scgms::set_base_path(library_path);
+
+        if (!scgms::is_scgms_loaded()) {
+            std::cerr << "Library loading failed!" << std::endl;
+            return "1";
+        }
+    }
+
+    std::cout << "SCGMS library loaded successfully." << std::endl;
+    return "0";
+}
+
+/**
+ * API
+ * @return list of available filters
+ */
 std::string listAvailableFiltersPython() {
     std::wstring filters = listAvailableFilters();
     return wstringToUtf8(filters);
 }
 
+/**
+ * dummy API
+ * @param number
+ * @return number + 1
+ */
 int add_one(int number) {
     return number + 1;
 }
@@ -151,19 +159,6 @@ m.def("list_available_filters", &listAvailableFiltersPython, "Lists available fi
 int main() {
 
     std::cout << "Hello, World!" << std::endl;
-//    if (scgms::is_scgms_loaded()) {
-//        std::cout << "SCGMS library successfully loaded." << std::endl;
-//        std::wstring filters = listAvailableFilters();
-//        std::wcout << filters << std::endl;
-//    } else {
-//        std::cerr << "SCGMS library is not loaded." << std::endl;
-//    }
-//
-//    execute();
-
-
-//    std::string filters = wstringToUtf8(listAvailableFilters());
-//    std::cout << filters << std::endl;
     return 0;
 }
 #endif

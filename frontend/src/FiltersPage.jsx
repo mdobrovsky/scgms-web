@@ -6,6 +6,7 @@ function FiltersPage() {
     const [availableFilters, setAvailableFilters] = useState([]); // Dynamically fetched filters
     const [appliedFilters, setAppliedFilters] = useState([]);
     const [selectedFilterIndex, setSelectedFilterIndex] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Fetch available filters from the backend
     useEffect(() => {
@@ -54,14 +55,17 @@ function FiltersPage() {
 
     const handleConfigureFilter = () => {
         if (selectedFilterIndex !== null) {
-            const selectedFilter = appliedFilters[selectedFilterIndex];
-            alert(`Configuring filter: ${selectedFilter}`);
+            setIsModalOpen(true); // Open the modal
         }
     };
 
     const handleRemoveAllFilter = () => {
         setAppliedFilters([]);
         setSelectedFilterIndex(null); // Reset selection
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false); // Close the modal
     };
 
     return (
@@ -112,6 +116,22 @@ function FiltersPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Modal for Filter Configuration */}
+            {isModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h2>Configure Filter</h2>
+                        {selectedFilterIndex !== null && (
+                            <p>Filter Name: {appliedFilters[selectedFilterIndex].name}</p>
+                        )}
+                        <div className="modal-actions">
+                            <button onClick={closeModal}>Close</button>
+                            <button onClick={() => alert('Save configurations')}>Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

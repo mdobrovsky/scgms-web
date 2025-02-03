@@ -3,4 +3,8 @@
 4262	8010	1736099062254699598	scgms_wrapper_debug	2ee3957529fbc87c
 10	4261	1736099058002522045	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	3ac8e3398e655a4b
 36	3535	1736102725248167343	/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so	8631ce4e466143eb
-9	87	1736103171278377951	build.ninja	dc37154cdd7e8350
+9	87	1736368862214981604	build.ninja	dc37154cdd7e8350
+13	2982	1736369997307219557	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	3ac8e3398e655a4b
+13	2986	1736369997306493920	CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o	285fb8e8544a4406
+2987	6674	1736370000281959992	/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so	8631ce4e466143eb
+2982	6674	1736370000276105440	scgms_wrapper_debug	2ee3957529fbc87c
