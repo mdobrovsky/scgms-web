@@ -35,7 +35,17 @@ std::wstring listAvailableFilters() {
     std::wstringstream output;
 
     for (const auto &filter : filterList) {
-        output << filter. << GUID_To_WString(filter.id) << std::endl;
+        output << filter.description << " " << GUID_To_WString(filter.id) << std::endl;
+        if (filter.parameters_count > 1) {
+            output << "Parameter count: " <<  filter.parameters_count <<  std::endl;
+            for (auto parameter_name: filter.ui_parameter_name) {
+                output << parameter_name << std::endl;
+            }
+            // for (int i = 0; i < filter.parameters_count; i++) {
+            //     output << filter.ui_parameter_name[i] << std::endl;
+            //
+            // }
+        }
     }
     return output.str();
 }
@@ -158,7 +168,7 @@ m.def("list_available_filters", &listAvailableFiltersPython, "Lists available fi
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
 
-    std::cout << "Hello, World!" << std::endl;
+    std::cout << wstringToUtf8(listAvailableFilters());
     return 0;
 }
 #endif
