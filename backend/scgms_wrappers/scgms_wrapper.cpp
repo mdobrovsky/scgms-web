@@ -30,35 +30,105 @@
 solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so that we can cancel from sigint
 scgms::SFilter_Executor Global_Filter_Executor;
 
-std::wstring listAvailableFilters() {
-    std::vector<scgms::TFilter_Descriptor> filterList = scgms::get_filter_descriptor_list();
-    std::wstringstream output;
-
-    for (const auto &filter : filterList) {
-        output << filter.description << " " << GUID_To_WString(filter.id) << std::endl;
-        if (filter.parameters_count > 1) {
-            output << "Parameter count: " <<  filter.parameters_count <<  std::endl;
-            for (auto parameter_name: filter.ui_parameter_name) {
-                output << parameter_name << std::endl;
-            }
-            // for (int i = 0; i < filter.parameters_count; i++) {
-            //     output << filter.ui_parameter_name[i] << std::endl;
-            //
-            // }
-        }
+std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
+    switch (type) {
+        case scgms::NParameter_Type::ptNull:
+            return L"ptNull";
+        case scgms::NParameter_Type::ptWChar_Array:
+            return L"ptWChar_Array";
+        case scgms::NParameter_Type::ptInt64_Array:
+            return L"ptInt64_Array";
+        case scgms::NParameter_Type::ptDouble:
+            return L"ptDouble";
+        case scgms::NParameter_Type::ptRatTime:
+            return L"ptRatTime";
+        case scgms::NParameter_Type::ptInt64:
+            return L"ptInt64";
+        case scgms::NParameter_Type::ptBool:
+            return L"ptBool";
+        case scgms::NParameter_Type::ptSignal_Model_Id:
+            return L"ptSignal_Model_Id";
+        case scgms::NParameter_Type::ptDiscrete_Model_Id:
+            return L"ptDiscrete_Model_Id";
+        case scgms::NParameter_Type::ptMetric_Id:
+            return L"ptMetric_Id";
+        case scgms::NParameter_Type::ptSolver_Id:
+            return L"ptSolver_Id";
+        case scgms::NParameter_Type::ptModel_Produced_Signal_Id:
+            return L"ptModel_Produced_Signal_Id";
+        case scgms::NParameter_Type::ptSignal_Id:
+            return L"ptSignal_Id";
+        case scgms::NParameter_Type::ptDouble_Array:
+            return L"ptDouble_Array";
+        case scgms::NParameter_Type::ptSubject_Id:
+            return L"ptSubject_Id";
+        case scgms::NParameter_Type::ptInvalid:
+            return L"ptInvalid";
+        default:
+            return L"Unknown";
     }
-    return output.str();
 }
 
+
+std::wstring listAvailableFilters() {
+    const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
+    std::wstringstream output;
+
+    output << L"{\"filters\":[";
+
+    // Iterate through all filters
+    for (size_t i = 0; i < filter_list.size(); ++i) {
+        const scgms::TFilter_Descriptor& filter = filter_list[i];
+        if (i > 0) {
+            output << L",";
+        }
+
+        output << L"{";
+        // Convert GUID to string
+        output << L"\"id\":\"" << GUID_To_WString(filter.id) << L"\",";
+        // Output flags (converted to int)
+        output << L"\"flags\":" << static_cast<int>(filter.flags) << L",";
+        // Output filter description
+        output << L"\"description\":\"" << filter.description << L"\",";
+        // Output number of parameters
+        output << L"\"parameters_count\":" << filter.parameters_count << L",";
+
+        // Insert parameters array
+        output << L"\"parameters\":[";
+        for (size_t j = 0; j < filter.parameters_count; ++j) {
+            if (j > 0) {
+                output << L",";
+            }
+            output << L"{";
+            // Output parameter type (as number)
+            scgms::NParameter_Type type = filter.parameter_type[j];
+            output << L"\"parameter_type\":\"" << ParameterTypeToString(type) << L"\",";
+            // Output UI parameter name
+            output << L"\"ui_parameter_name\":\""
+                   << (filter.ui_parameter_name[j] ? filter.ui_parameter_name[j] : L"") << L"\",";
+            // Output config parameter name
+            output << L"\"config_parameter_name\":\""
+                   << (filter.config_parameter_name[j] ? filter.config_parameter_name[j] : L"") << L"\",";
+            // Output tooltip
+            output << L"\"ui_parameter_tooltip\":\""
+                   << (filter.ui_parameter_tooltip[j] ? filter.ui_parameter_tooltip[j] : L"") << L"\"";
+            output << L"}";
+        }
+        output << L"]"; // end of parameters array
+
+        output << L"}"; // end of one filter
+    }
+
+    output << L"]}"; // end of filters array
+    return output.str();
+}
 
 
 HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
     if (filter) {
         std::wcout << L"Filter created successfully." << std::endl;
 
-        scgms::SDrawing_Filter_Inspection_v2 insp(scgms::SFilter(filter));
-
-
+        scgms::SDrawing_Filter_Inspection_v2 insp(scgms::SFilter (filter));
     } else {
         std::wcerr << L"Error: Filter creation failed!" << std::endl;
     }
@@ -66,8 +136,7 @@ HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
     return S_OK;
 }
 
-int execute(const std::wstring& config_path) {
-
+int execute(const std::wstring &config_path) {
     // Load Configuration
     scgms::SPersistent_Filter_Chain_Configuration configuration;
     refcnt::Swstr_list errors;
@@ -78,10 +147,10 @@ int execute(const std::wstring& config_path) {
 
         // Execute the filter chain
         Global_Filter_Executor = scgms::SFilter_Executor{
-                configuration.get(),
-                reinterpret_cast<scgms::TOn_Filter_Created>(on_filter_created_callback), // Callback function
-                nullptr,                    // Callback data
-                errors,
+            configuration.get(),
+            reinterpret_cast<scgms::TOn_Filter_Created>(on_filter_created_callback), // Callback function
+            nullptr, // Callback data
+            errors,
         };
 
         if (Global_Filter_Executor) {
@@ -107,10 +176,10 @@ int execute(const std::wstring& config_path) {
 }
 
 // help function for conversion std::wstring on std::string (UTF-8)
-std::string wstringToUtf8(const std::wstring& wstr) {
+std::string wstringToUtf8(const std::wstring &wstr) {
     std::string result;
     std::mbstate_t state = std::mbstate_t();
-    const wchar_t* data = wstr.data();
+    const wchar_t *data = wstr.data();
     size_t len = 1 + std::wcsrtombs(nullptr, &data, 0, &state);
 
     std::vector<char> buffer(len);
@@ -159,17 +228,15 @@ int add_one(int number) {
 }
 
 PYBIND11_MODULE(scgms_wrapper, m) {
-m.doc() = "SCGMS dummy Python module";  // Dokumentace modulu
-m.def("add_one", &add_one, "A function that adds 1 to a number");
-m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
-m.def("list_available_filters", &listAvailableFiltersPython, "Lists available filters");
+    m.doc() = "SCGMS dummy Python module"; // Dokumentace modulu
+    m.def("add_one", &add_one, "A function that adds 1 to a number");
+    m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
+    m.def("list_available_filters", &listAvailableFiltersPython, "Lists available filters");
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-
     std::cout << wstringToUtf8(listAvailableFilters());
     return 0;
 }
 #endif
-
