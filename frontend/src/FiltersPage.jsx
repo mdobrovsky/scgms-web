@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import axios from 'axios';
-import { Container, Card, Button, ListGroup, Modal } from 'react-bootstrap';
+import {Container, Card, Button, ListGroup, Modal, Row, Col, Form, ButtonGroup} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './FiltersPage.css'; // Ujisti se, že obsahuje tvé stylování
+
+// import './FiltersPage.css';
 
 function FiltersPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
@@ -13,19 +14,12 @@ function FiltersPage() {
     useEffect(() => {
         const fetchFilters = async () => {
             try {
-                const response = await axios.get('http://127.0.0.1:5000/fetch_filters');
+                await axios.get('http://127.0.0.1:5000/fetch_filters')
+                    .then((response) => {
+                        setAvailableFilters(response.data.filters);
+                        console.log(response.data.filters);
+                    });
 
-                let filters = response.data.split("\n").filter(line => line.trim() !== "");
-
-                const parsedFilters = filters.map(filter => {
-                    const match = filter.match(/^(.*)\{([A-F0-9-]+)\}$/);
-                    if (match) {
-                        return { name: match[1].trim(), guid: match[2] };
-                    }
-                    return null;
-                }).filter(item => item !== null);
-
-                setAvailableFilters(parsedFilters);
             } catch (error) {
                 console.error('Error fetching filters:', error);
             }
@@ -56,82 +50,129 @@ function FiltersPage() {
         setSelectedFilterIndex(null);
     };
 
+
+    function getParametersInputs(filter) {
+        return (
+            filter.parameters.map((parameter, index) => (
+                <Container key={index} className="flex-column">
+                    <Row style={{paddingTop: "10px"}}>
+                        <Col xs={6} md={6}>
+                            <p>{parameter.ui_parameter_name}</p>
+                            <p className="small text-muted">{parameter.ui_parameter_tooltip ? (parameter.ui_parameter_tooltip) : ("")}</p>
+
+                        </Col>
+                        <Col lg={6} md={6}>
+                            {parameter.parameter_type === "ptBool" ? (
+                                <Form.Check
+                                    type="switch"
+                                    id={parameter.ui_parameter_name}
+                                    label=""
+                                />
+                            ) : (
+                                <Form.Control id={parameter.ui_parameter_name} type=""
+                                              placeholder={parameter.ui_parameter_name}>
+                                </Form.Control>)
+                            }
+                            <Form.Text id={parameter.ui_parameter_name} muted>
+                                {parameter.parameter_type}
+                            </Form.Text>
+                        </Col>
+                        <hr/>
+                    </Row>
+                </Container>
+            )))
+    }
+
     return (
-        <Container className="container">
+        <Container className="container  align-items-baseline ">
             {/* Applied Filters Section */}
             <Card className="card applied-filters">
                 <Card.Body>
-                    <Card.Title as="h3">Applied Filters</Card.Title>
-                    <ListGroup>
-                        {appliedFilters.length > 0 ? (
-                            appliedFilters.map((filter, index) => (
-                                <ListGroup.Item
-                                    key={`${filter.guid}-${index}`}
-                                    className={`filter-item ${selectedFilterIndex === index ? 'selected' : ''}`}
-                                    action
-                                    onClick={() => setSelectedFilterIndex(index)}
-                                >
-                                    {filter.name}
-                                </ListGroup.Item>
-                            ))
-                        ) : (
-                            <ListGroup.Item className="filter-item">No filters applied.</ListGroup.Item>
-                        )}
-                    </ListGroup>
-                    {appliedFilters.length > 0 && (
-                        <div className="actions">
-                            <Button onClick={handleConfigureFilter} disabled={selectedFilterIndex === null}>
+                    <Container className="container flex-column gap-5">
+                        <Card.Title as="h3">Applied Filters</Card.Title>
+                        <ListGroup className="overflow-y-scroll" style={{maxHeight: "400px"}}>
+                            {appliedFilters.length > 0 ? (
+                                appliedFilters.map((filter, index) => (
+                                    <ListGroup.Item
+                                        key={`${filter.guid}-${index}`}
+                                        className={`filter-item ${selectedFilterIndex === index ? 'selected' : ''}`}
+                                        action
+                                        onClick={() => setSelectedFilterIndex(index)}
+                                    >
+                                        {filter.description}
+                                    </ListGroup.Item>
+                                ))
+                            ) : (
+                                <ListGroup.Item className="filter-item">No filters applied.</ListGroup.Item>
+                            )}
+                        </ListGroup>
+                        <ButtonGroup className="">
+                            <Button variant="primary" onClick={handleConfigureFilter}
+                                    disabled={selectedFilterIndex === null}>
                                 Configure
                             </Button>
-                            <Button onClick={handleRemoveFilter} disabled={selectedFilterIndex === null}>
+                            <Button variant="warning" onClick={handleRemoveFilter}
+                                    disabled={selectedFilterIndex === null}>
                                 Remove
                             </Button>
-                            <Button onClick={handleRemoveAllFilter}>
+                            <Button variant="danger" onClick={handleRemoveAllFilter}
+                                    disabled={appliedFilters.length === 0}>
                                 Remove All
                             </Button>
-                        </div>
-                    )}
+                        </ButtonGroup>
+                    </Container>
+
                 </Card.Body>
+
             </Card>
 
             {/* Available Filters Section */}
             <Card className="card available-filters">
                 <Card.Body>
                     <Card.Title as="h3">Available Filters</Card.Title>
-                    <ListGroup>
-                        {availableFilters.map((filter, index) => (
-                            <ListGroup.Item
-                                key={index}
-                                className="filter-item hoverable"
-                                action
-                                onClick={() => handleAddFilter(filter)}
-                            >
-                                {filter.name}
-                            </ListGroup.Item>
-                        ))}
-                    </ListGroup>
+                        <ListGroup className="overflow-y-scroll" style={{maxHeight: "500px"}} >
+                            {availableFilters.map((filter) => (
+                                <ListGroup.Item
+                                    key={filter.id}
+                                    className="filter-item hoverable"
+                                    action
+                                    onClick={() => handleAddFilter(filter)}
+                                >
+                                    {filter.description}
+                                </ListGroup.Item>
+                            ))}
+                        </ListGroup>
                 </Card.Body>
             </Card>
 
             {/* Modal for Filter Configuration */}
-            <Modal show={isModalOpen} onHide={() => setIsModalOpen(false)}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Configure Filter</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    {selectedFilterIndex !== null && (
-                        <p>Filter Name: {appliedFilters[selectedFilterIndex].name}</p>
-                    )}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-                        Close
-                    </Button>
-                    <Button variant="primary" onClick={() => alert('Save configurations')}>
-                        Save
-                    </Button>
-                </Modal.Footer>
-            </Modal>
+            {appliedFilters[selectedFilterIndex] ?
+                (<Modal size={"lg"}
+                        show={isModalOpen} onHide={() => setIsModalOpen(false)}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Configure <b>{appliedFilters[selectedFilterIndex]?.description}</b></Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Container
+                            className="
+                            container bg-light text-black
+                            flex-wrap flex-column justify-content-start"
+                            style={{minHeight: 'auto'}}>
+                            {getParametersInputs(appliedFilters[selectedFilterIndex])}
+                        </Container>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+                            Close
+                        </Button>
+                        <Button variant="primary" onClick={() => alert('Save configurations')}>
+                            Save
+                        </Button>
+                    </Modal.Footer>
+                </Modal>) : ("")
+
+            }
+
         </Container>
     );
 }

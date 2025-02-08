@@ -228,7 +228,7 @@ int add_one(int number) {
 }
 
 PYBIND11_MODULE(scgms_wrapper, m) {
-    m.doc() = "SCGMS dummy Python module"; // Dokumentace modulu
+    m.doc() = "SCGMS Python module"; // Dokumentace modulu
     m.def("add_one", &add_one, "A function that adds 1 to a number");
     m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
     m.def("list_available_filters", &listAvailableFiltersPython, "Lists available filters");
