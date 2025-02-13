@@ -30,6 +30,8 @@
 solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so that we can cancel from sigint
 scgms::SFilter_Executor Global_Filter_Executor;
 
+scgms::SPersistent_Filter_Chain_Configuration chain_configuration;
+
 std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
     switch (type) {
         case scgms::NParameter_Type::ptNull:
@@ -69,16 +71,66 @@ std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
     }
 }
 
+std::string add_filter(const std::string &guid_string) {
+    bool ok;
+    chain_configuration.Add_Link(WString_To_GUID(Widen_String(guid_string), ok));
+    return ok ? "0" : "1";
+}
+
+std::string save_configuration(std::string &path) {
+    refcnt::Swstr_list errors;
+
+    HRESULT res = chain_configuration->Save_To_File(Widen_String(path).c_str(), errors.get());
+    return Succeeded(res) ? "0" : "1";
+}
+
+std::string remove_filter(int index) {
+    HRESULT res = chain_configuration->remove(index);
+    return Succeeded(res) ? "0" : "1";
+}
+
+
+std::string remove_all_filters() {
+    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+
+    HRESULT res = chain_configuration->empty();
+    return Succeeded(res) ? "0" : "1";
+}
+
 
 std::wstring listAvailableFilters() {
     const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
     std::wstringstream output;
+    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
 
     output << L"{\"filters\":[";
 
     // Iterate through all filters
     for (size_t i = 0; i < filter_list.size(); ++i) {
-        const scgms::TFilter_Descriptor& filter = filter_list[i];
+        const scgms::TFilter_Descriptor &filter = filter_list[i];
+        // if (i == 5) {
+        //     // std::string success = add_filter(Narrow_WString(GUID_To_WString(filter.id)));
+        //     // std::cout << success << std::endl;
+        //     // test one configuration parameter
+        //     scgms::SFilter_Configuration_Link link = chain_configuration.Add_Link(filter.id);
+        //
+        //     for (int j = 0; j < filter.parameters_count; ++j) {
+        //         scgms::SFilter_Parameter parameter = link.Resolve_Parameter(filter.config_parameter_name[j]);
+        //         if (!parameter && (filter.parameter_type[j] != scgms::NParameter_Type::ptNull)) {
+        //             std::wcerr << L"Failed to resolve parameter. Creating" << std::endl;
+        //             parameter = link.Add_Parameter(scgms::NParameter_Type::ptBool, filter.config_parameter_name[j]);
+        //             if (!parameter) {
+        //                 continue;
+        //             }
+        //         }
+        //         HRESULT res = parameter->Set_Bool(true);
+        //         if (!Succeeded(res)) {
+        //             std::wcerr << L"Failed to set parameter value." << std::endl;
+        //         }
+        //     }
+        //
+        //     print_configuration();
+        // }
         if (i > 0) {
             output << L",";
         }
@@ -105,13 +157,13 @@ std::wstring listAvailableFilters() {
             output << L"\"parameter_type\":\"" << ParameterTypeToString(type) << L"\",";
             // Output UI parameter name
             output << L"\"ui_parameter_name\":\""
-                   << (filter.ui_parameter_name[j] ? filter.ui_parameter_name[j] : L"") << L"\",";
+                    << (filter.ui_parameter_name[j] ? filter.ui_parameter_name[j] : L"") << L"\",";
             // Output config parameter name
             output << L"\"config_parameter_name\":\""
-                   << (filter.config_parameter_name[j] ? filter.config_parameter_name[j] : L"") << L"\",";
+                    << (filter.config_parameter_name[j] ? filter.config_parameter_name[j] : L"") << L"\",";
             // Output tooltip
             output << L"\"ui_parameter_tooltip\":\""
-                   << (filter.ui_parameter_tooltip[j] ? filter.ui_parameter_tooltip[j] : L"") << L"\"";
+                    << (filter.ui_parameter_tooltip[j] ? filter.ui_parameter_tooltip[j] : L"") << L"\"";
             output << L"}";
         }
         output << L"]"; // end of parameters array
@@ -138,7 +190,7 @@ HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
 
 int execute(const std::wstring &config_path) {
     // Load Configuration
-    scgms::SPersistent_Filter_Chain_Configuration configuration;
+    scgms::SPersistent_Filter_Chain_Configuration configuration = scgms::SPersistent_Filter_Chain_Configuration();
     refcnt::Swstr_list errors;
 
 
@@ -232,11 +284,16 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("add_one", &add_one, "A function that adds 1 to a number");
     m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
     m.def("list_available_filters", &listAvailableFiltersPython, "Lists available filters");
+    m.def("add_filter", &add_filter, "Adds a filter to the configuration");
+    m.def("save_configuration", &save_configuration, "Saves the configuration to a file");
+
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    std::cout << wstringToUtf8(listAvailableFilters());
+    // std::cout << wstringToUtf8(listAvailableFilters());
+    listAvailableFilters();
+
     return 0;
 }
 #endif

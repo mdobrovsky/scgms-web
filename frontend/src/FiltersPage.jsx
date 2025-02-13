@@ -1,7 +1,8 @@
-import React, {useState, useEffect} from 'react';
+import {useState, useEffect} from 'react';
 import axios from 'axios';
-import {Container, Card, Button, ListGroup, Modal, Row, Col, Form, ButtonGroup} from 'react-bootstrap';
+import {Container, Card, Button, ListGroup, Modal, Row, Col, Form, ButtonGroup, Spinner, Alert} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import {ADD_FILTER_URL, FETCH_FILTERS_URL, SAVE_CONFIGURATION_URL} from './apiConstants.jsx';
 
 // import './FiltersPage.css';
 
@@ -9,15 +10,22 @@ function FiltersPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
     const [appliedFilters, setAppliedFilters] = useState([]);
     const [selectedFilterIndex, setSelectedFilterIndex] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isParamModalOpen, setIsParamModalOpen] = useState(false);
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showSpinner, setShowSpinner] = useState(false);
+    const [showErrorAlert, setShowErrorAlert] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [configFileName, setConfigFileName] = useState('');
+    const [fileNameError, setFileNameError] = useState('');
 
     useEffect(() => {
         const fetchFilters = async () => {
             try {
-                await axios.get('http://127.0.0.1:5000/fetch_filters')
+                await axios.get(FETCH_FILTERS_URL)
                     .then((response) => {
                         setAvailableFilters(response.data.filters);
-                        console.log(response.data.filters);
+                        // console.log(response.data.filters);
                     });
 
             } catch (error) {
@@ -28,8 +36,67 @@ function FiltersPage() {
         fetchFilters();
     }, []);
 
+    useEffect(() => {
+        let timer;
+        if (isLoading) {
+            timer = setTimeout(() => {
+                setShowSpinner(true);
+            }, 300); // spinner will be shown only after 300ms of loading
+        } else {
+            setShowSpinner(false);
+        }
+        return () => clearTimeout(timer);
+    }, [isLoading]);
+
+
+    const validateFileName = (name) => {
+        if (!name) {
+            return "File name cannot be empty.";
+        }
+        if (name.length > 50) {
+            return "File name is too long (max 50 characters).";
+        }
+        if (/[/\\:*!?"<>|]/.test(name)) {
+            return "File name contains invalid characters: \\/:*?!\"<>|";
+        }
+        return ''; // no error
+    };
+
+    const handleFileNameChange = (e) => {
+        const newFileName = e.target.value;
+        setConfigFileName(newFileName);
+        setFileNameError(validateFileName(newFileName));
+    };
+
+    const handleShowErrorAlert = (message, error) => {
+        setErrorMessage(`${message} ${error}`);
+        setShowErrorAlert(true);
+        setTimeout(() => setShowErrorAlert(false), 5000);
+    }
+
     const handleAddFilter = (filter) => {
-        setAppliedFilters([...appliedFilters, filter]);
+        // send post request to server
+        setIsLoading(true);
+        const guid_string = filter.id;
+        console.log(`Adding filter with ID: ${guid_string}`);
+        axios.post(ADD_FILTER_URL, {guid_string})
+            .then((response) => {
+                console.log('Filter added successfully:', response.data);
+                if (response.data.result !== '0') {
+                    handleShowErrorAlert("Error while adding a filter.");
+                    return;
+                }
+                setAppliedFilters([...appliedFilters, filter]);
+            })
+            .catch(error => {
+                console.error("Error while adding a filter:", error);
+                // show alert
+                handleShowErrorAlert("Error while adding a filter:", error);
+            })
+            .finally(() => {
+                console.log('Add filter request completed');
+                setIsLoading(false);
+            });
     };
 
     const handleRemoveFilter = () => {
@@ -39,11 +106,46 @@ function FiltersPage() {
         }
     };
 
+    const handleSaveConfiguration = () => {
+        setIsConfigModalOpen(true);
+
+    }
+
     const handleConfigureFilter = () => {
+
         if (selectedFilterIndex !== null) {
-            setIsModalOpen(true);
+            setIsParamModalOpen(true);
         }
     };
+
+
+    const handleDownload = async () => {
+        if (fileNameError || !configFileName) {
+            return;
+        }
+        setIsConfigModalOpen(false);
+        try {
+            const response = await axios.post(
+                SAVE_CONFIGURATION_URL
+                ,{
+                    file_name: configFileName
+                }
+                , {
+                    responseType: 'blob',
+                });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${configFileName}.ini`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Error downloading configuration:", error);
+        }
+    };
+
 
     const handleRemoveAllFilter = () => {
         setAppliedFilters([]);
@@ -52,14 +154,14 @@ function FiltersPage() {
 
 
     function getParametersInputs(filter) {
-        return (
-            filter.parameters.map((parameter, index) => (
+        return filter.parameters
+            .filter(parameter => parameter.parameter_type !== "ptNull")
+            .map((parameter, index) => (
                 <Container key={index} className="flex-column">
                     <Row style={{paddingTop: "10px"}}>
                         <Col xs={6} md={6}>
                             <p>{parameter.ui_parameter_name}</p>
                             <p className="small text-muted">{parameter.ui_parameter_tooltip ? (parameter.ui_parameter_tooltip) : ("")}</p>
-
                         </Col>
                         <Col lg={6} md={6}>
                             {parameter.parameter_type === "ptBool" ? (
@@ -80,100 +182,173 @@ function FiltersPage() {
                         <hr/>
                     </Row>
                 </Container>
-            )))
+            ))
     }
 
     return (
-        <Container className="container  align-items-baseline ">
-            {/* Applied Filters Section */}
-            <Card className="card applied-filters">
-                <Card.Body>
-                    <Container className="container flex-column gap-5">
-                        <Card.Title as="h3">Applied Filters</Card.Title>
-                        <ListGroup className="overflow-y-scroll" style={{maxHeight: "400px"}}>
-                            {appliedFilters.length > 0 ? (
-                                appliedFilters.map((filter, index) => (
-                                    <ListGroup.Item
-                                        key={`${filter.guid}-${index}`}
-                                        className={`filter-item ${selectedFilterIndex === index ? 'selected' : ''}`}
-                                        action
-                                        onClick={() => setSelectedFilterIndex(index)}
-                                    >
-                                        {filter.description}
-                                    </ListGroup.Item>
-                                ))
-                            ) : (
-                                <ListGroup.Item className="filter-item">No filters applied.</ListGroup.Item>
-                            )}
-                        </ListGroup>
-                        <ButtonGroup className="">
-                            <Button variant="primary" onClick={handleConfigureFilter}
-                                    disabled={selectedFilterIndex === null}>
-                                Configure
-                            </Button>
-                            <Button variant="warning" onClick={handleRemoveFilter}
-                                    disabled={selectedFilterIndex === null}>
-                                Remove
-                            </Button>
-                            <Button variant="danger" onClick={handleRemoveAllFilter}
-                                    disabled={appliedFilters.length === 0}>
-                                Remove All
-                            </Button>
-                        </ButtonGroup>
-                    </Container>
+        <Container className={"container"}>
 
-                </Card.Body>
+            {showErrorAlert && (
+                <Alert variant="danger" onClose={() => setShowErrorAlert(false)} dismissible
+                       className="position-relative top-0 start-0 w-100">
+                    <Alert.Heading>Error</Alert.Heading>
+                    <p>{errorMessage}</p>
+                </Alert>
+            )}
+            <Container className=" mt-3 justify-content-around">
 
-            </Card>
 
-            {/* Available Filters Section */}
-            <Card className="card available-filters">
-                <Card.Body>
-                    <Card.Title as="h3">Available Filters</Card.Title>
-                        <ListGroup className="overflow-y-scroll" style={{maxHeight: "500px"}} >
-                            {availableFilters.map((filter) => (
-                                <ListGroup.Item
-                                    key={filter.id}
-                                    className="filter-item hoverable"
-                                    action
-                                    onClick={() => handleAddFilter(filter)}
-                                >
-                                    {filter.description}
-                                </ListGroup.Item>
-                            ))}
-                        </ListGroup>
-                </Card.Body>
-            </Card>
+                {/* Loading overlay */}
+                {showSpinner && (
+                    <div
+                        className="position-fixed top-0 start-0 w-100 h-100 d-flex
+                    justify-content-center align-items-center bg-dark bg-opacity-50"
+                        style={{zIndex: 1050}}>
+                        <Spinner animation="border" variant="light"/>
+                    </div>
+                )}
+                {/* Applied Filters Section */}
+                <Row className="">
+                    <Col md={6} className="d-flex">
+                        <Card className="card applied-filters w-100">
+                            <Card.Body>
+                                <Container className="container flex-column gap-5">
+                                    <Card.Title as="h3">Applied Filters</Card.Title>
+                                    <ListGroup className="overflow-y-scroll" style={{maxHeight: "400px"}}>
+                                        {appliedFilters.length > 0 ? (
+                                            appliedFilters.map((filter, index) => (
+                                                <ListGroup.Item
+                                                    key={`${filter.guid}-${index}`}
+                                                    className={`filter-item ${selectedFilterIndex === index ? 'selected' : ''}`}
+                                                    action
+                                                    onClick={() => setSelectedFilterIndex(index)}
+                                                >
+                                                    {filter.description}
+                                                </ListGroup.Item>
+                                            ))
+                                        ) : (
+                                            <ListGroup.Item className="filter-item">No filters applied.</ListGroup.Item>
+                                        )}
+                                    </ListGroup>
+                                    <ButtonGroup className="mt-5">
+                                        <Button variant="primary" onClick={handleConfigureFilter}
+                                                disabled={selectedFilterIndex === null}>
+                                            Configure
+                                        </Button>
+                                        <Button variant="warning" onClick={handleRemoveFilter}
+                                                disabled={selectedFilterIndex === null}>
+                                            Remove
+                                        </Button>
+                                        <Button variant="danger" onClick={handleRemoveAllFilter}
+                                                disabled={appliedFilters.length === 0}>
+                                            Remove All
+                                        </Button>
+                                        <Button variant="info" onClick={handleSaveConfiguration}
+                                                disabled={appliedFilters.length === 0}>
+                                            Save Configuration
+                                        </Button>
+                                    </ButtonGroup>
+                                </Container>
 
-            {/* Modal for Filter Configuration */}
-            {appliedFilters[selectedFilterIndex] ?
-                (<Modal size={"lg"}
-                        show={isModalOpen} onHide={() => setIsModalOpen(false)}>
-                    <Modal.Header closeButton>
-                        <Modal.Title>Configure <b>{appliedFilters[selectedFilterIndex]?.description}</b></Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <Container
-                            className="
+                            </Card.Body>
+
+                        </Card>
+                    </Col>
+                    <Col md={6} className="d-flex">
+                        {/* Available Filters Section */}
+                        <Card className="card available-filters w-100">
+                            <Card.Body>
+                                <Card.Title as="h3">Available Filters</Card.Title>
+                                <ListGroup className="overflow-y-scroll" style={{maxHeight: "500px"}}>
+                                    {availableFilters.map((filter) => (
+                                        <ListGroup.Item
+                                            key={filter.id}
+                                            className="filter-item hoverable"
+                                            action
+                                            onClick={() => handleAddFilter(filter)}
+                                        >
+                                            {filter.description}
+                                        </ListGroup.Item>
+                                    ))}
+                                </ListGroup>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+
+                {/* Modal for Filter Configuration */}
+                {appliedFilters[selectedFilterIndex] ?
+                    (<Modal size={"lg"}
+                            show={isParamModalOpen} onHide={() => setIsParamModalOpen(false)}>
+                        <Modal.Header closeButton>
+                            <Modal.Title>Configure <b>{appliedFilters[selectedFilterIndex]?.description}</b></Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            <Container
+                                className="
                             container bg-light text-black
                             flex-wrap flex-column justify-content-start"
-                            style={{minHeight: 'auto'}}>
-                            {getParametersInputs(appliedFilters[selectedFilterIndex])}
-                        </Container>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-                            Close
-                        </Button>
-                        <Button variant="primary" onClick={() => alert('Save configurations')}>
-                            Save
-                        </Button>
-                    </Modal.Footer>
-                </Modal>) : ("")
+                                style={{minHeight: 'auto'}}>
+                                {getParametersInputs(appliedFilters[selectedFilterIndex])}
+                            </Container>
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={() => setIsParamModalOpen(false)}>
+                                Close
+                            </Button>
+                            <Button variant="primary" onClick={() => alert('Save configurations')}>
+                                Save
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>) : ("")
+                }
 
-            }
+                {/* Modal for Save Configuration */}
+                {
+                    (<Modal size={"lg"}
+                            show={isConfigModalOpen} onHide={() => setIsParamModalOpen(false)}>
+                        <Modal.Header closeButton>
+                            <Modal.Title>Save Configuration</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            <Container
+                                className="
+                            container bg-light text-black
+                            flex-wrap flex-column justify-content-start"
+                                style={{minHeight: 'auto'}}>
+                                <Form.Group>
+                                    <Form.Label>Configuration File Name</Form.Label>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="Enter file name"
+                                        value={configFileName}
+                                        onChange={handleFileNameChange}
+                                        isInvalid={!!fileNameError}
+                                    >
+                                    </Form.Control>
 
+                                    <Form.Control.Feedback type="invalid">{fileNameError}</Form.Control.Feedback>
+                                    <Form.Text muted>
+                                        Enter the name of the configuration file (without extension). Avoid special
+                                        characters.
+                                    </Form.Text>
+                                </Form.Group>
+                            </Container>
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={() => setIsParamModalOpen(false)}>
+                                Close
+                            </Button>
+                            <Button variant="primary" onClick={() => handleDownload()}>
+                                Download Configuration
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>)
+                }
+
+            </Container>
         </Container>
+
     );
 }
 
