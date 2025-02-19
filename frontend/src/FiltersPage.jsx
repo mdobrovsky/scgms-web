@@ -2,7 +2,7 @@ import {useState, useEffect} from 'react';
 import axios from 'axios';
 import {Container, Card, Button, ListGroup, Modal, Row, Col, Form, ButtonGroup, Spinner, Alert} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {ADD_FILTER_URL, FETCH_FILTERS_URL, SAVE_CONFIGURATION_URL} from './apiConstants.jsx';
+import {ADD_FILTER_URL, FETCH_FILTERS_URL, REMOVE_FILTER_URL, SAVE_CONFIGURATION_URL} from './apiConstants.jsx';
 
 // import './FiltersPage.css';
 
@@ -99,10 +99,33 @@ function FiltersPage() {
             });
     };
 
+    function removeOneFilter(index_to_remove) {
+        return axios.post(REMOVE_FILTER_URL, {index: index_to_remove})
+            .then((response) => {
+                console.log('Filter removed successfully:', response.data);
+                if (response.data.result !== '0') {
+                    handleShowErrorAlert("Error while removing a filter.");
+                    return 1;
+                }
+                else {
+                    console.log('Removing filter at index:', index_to_remove);
+                    // setAppliedFilters(appliedFilters.filter((_, index) => index !== index_to_remove));
+                    setAppliedFilters(prevFilters =>
+                        prevFilters.filter((_, index) => index !== index_to_remove)
+                    );
+                    return 0;
+                }
+            })
+    }
+
     const handleRemoveFilter = () => {
         if (selectedFilterIndex !== null) {
-            setAppliedFilters(appliedFilters.filter((_, index) => index !== selectedFilterIndex));
-            setSelectedFilterIndex(null);
+            removeOneFilter(selectedFilterIndex).then((res) => {
+                if (res === 0) {
+                    setSelectedFilterIndex(null);
+                }
+            })
+
         }
     };
 
@@ -147,10 +170,20 @@ function FiltersPage() {
     };
 
 
-    const handleRemoveAllFilter = () => {
-        setAppliedFilters([]);
+    const handleRemoveAllFilters = async () => {
+        const filtersToRemove = [...appliedFilters];
+
+        for (let i = filtersToRemove.length - 1; i >= 0; i--) {
+            const result = await removeOneFilter(i);
+            if (result === 1) {
+                console.error(`Error removing filter at index ${i}`);
+                break;
+            }
+        }
         setSelectedFilterIndex(null);
     };
+
+
 
 
     function getParametersInputs(filter) {
@@ -239,7 +272,7 @@ function FiltersPage() {
                                                 disabled={selectedFilterIndex === null}>
                                             Remove
                                         </Button>
-                                        <Button variant="danger" onClick={handleRemoveAllFilter}
+                                        <Button variant="danger" onClick={handleRemoveAllFilters}
                                                 disabled={appliedFilters.length === 0}>
                                             Remove All
                                         </Button>
