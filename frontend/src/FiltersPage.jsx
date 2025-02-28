@@ -2,12 +2,20 @@ import {useState, useEffect} from 'react';
 import axios from 'axios';
 import {Container, Card, Button, ListGroup, Modal, Row, Col, Form, ButtonGroup, Spinner, Alert} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {ADD_FILTER_URL, FETCH_FILTERS_URL, REMOVE_FILTER_URL, SAVE_CONFIGURATION_URL} from './apiConstants.jsx';
+import {
+    ADD_FILTER_URL,
+    FETCH_FILTERS_URL,
+    FETCH_SIGNALS_URL,
+    REMOVE_FILTER_URL,
+    SAVE_CONFIGURATION_URL
+} from './apiConstants.jsx';
+import ParameterInput from "./ParameterInput";
 
 // import './FiltersPage.css';
 
 function FiltersPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
+    const [availableSignals, setAvailableSignals] = useState([]);
     const [appliedFilters, setAppliedFilters] = useState([]);
     const [selectedFilterIndex, setSelectedFilterIndex] = useState(null);
     const [isParamModalOpen, setIsParamModalOpen] = useState(false);
@@ -20,6 +28,18 @@ function FiltersPage() {
     const [fileNameError, setFileNameError] = useState('');
 
     useEffect(() => {
+        const fetchSignals = async () => {
+            try {
+                await axios.get(FETCH_SIGNALS_URL)
+                    .then((response) => {
+                        setAvailableSignals(response.data.signals);
+                        // console.log(response.data.signals);
+                    });
+
+            } catch (error) {
+                console.error('Error fetching signals:', error);
+            }
+        }
         const fetchFilters = async () => {
             try {
                 await axios.get(FETCH_FILTERS_URL)
@@ -33,6 +53,7 @@ function FiltersPage() {
             }
         };
 
+        fetchSignals();
         fetchFilters();
     }, []);
 
@@ -197,17 +218,7 @@ function FiltersPage() {
                             <p className="small text-muted">{parameter.ui_parameter_tooltip ? (parameter.ui_parameter_tooltip) : ("")}</p>
                         </Col>
                         <Col lg={6} md={6}>
-                            {parameter.parameter_type === "ptBool" ? (
-                                <Form.Check
-                                    type="switch"
-                                    id={parameter.ui_parameter_name}
-                                    label=""
-                                />
-                            ) : (
-                                <Form.Control id={parameter.ui_parameter_name} type=""
-                                              placeholder={parameter.ui_parameter_name}>
-                                </Form.Control>)
-                            }
+                            <ParameterInput parameter={parameter} signals={availableSignals}/>
                             <Form.Text id={parameter.ui_parameter_name} muted>
                                 {parameter.parameter_type}
                             </Form.Text>
