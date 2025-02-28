@@ -1,8 +1,8 @@
 import React from "react";
-import { Modal, Button, Container } from "react-bootstrap";
+import {Modal, Button, Container, Row, Col, Form} from "react-bootstrap";
 import ParameterInput from "./ParameterInput";
 
-const FilterConfigModal = ({ filter, show, onClose }) => {
+const FilterConfigModal = ({filter, show, onClose, signals}) => {
     if (!filter) return null;
 
     return (
@@ -12,14 +12,32 @@ const FilterConfigModal = ({ filter, show, onClose }) => {
             </Modal.Header>
             <Modal.Body>
                 <Container>
-                    {filter.parameters.map((param, index) => (
-                        <ParameterInput key={index} parameter={param} />
+                    {filter.parameters.map((parameter, index) => (
+                        // <div key={index}>
+                        //     <p>{param.ui_parameter_name}</p>
+                        //     <ParameterInput key={index} parameter={param}/>
+                        // </div>
+                        <Container key={index} className="flex-column">
+                            <Row style={{paddingTop: "10px"}}>
+                                <Col xs={6} md={6}>
+                                    <p>{parameter.ui_parameter_name}</p>
+                                    <p className="small text-muted">{parameter.ui_parameter_tooltip ? (parameter.ui_parameter_tooltip) : ("")}</p>
+                                </Col>
+                                <Col lg={6} md={6}>
+                                    <ParameterInput parameter={parameter} signals={signals}/>
+                                    <Form.Text id={parameter.ui_parameter_name} muted>
+                                        {parameter.parameter_type}
+                                    </Form.Text>
+                                </Col>
+                                <hr/>
+                            </Row>
+                        </Container>
                     ))}
                 </Container>
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose}>Close</Button>
-                <Button variant="primary">Save</Button>
+                <Button variant="outline-dark">Save changes</Button>
             </Modal.Footer>
         </Modal>
     );

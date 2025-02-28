@@ -1,7 +1,24 @@
 import React from "react";
-import { Modal, Button, Container, Form } from "react-bootstrap";
+import {Modal, Button, Container, Form} from "react-bootstrap";
 
-const SaveConfigModal = ({ show, onClose, onSave, fileName, setFileName, fileNameError }) => {
+const SaveConfigModal = ({show, onClose, onSave, fileName, setFileName, fileNameError, setFileNameError}) => {
+    const validateFileName = (name) => {
+        if (!name) {
+            return "File name cannot be empty.";
+        }
+        if (name.length > 50) {
+            return "File name is too long (max 50 characters).";
+        }
+        if (/[/\\:*!?"<>|]/.test(name)) {
+            return "File name contains invalid characters: \\/:*?!\"<>|";
+        }
+        return ''; // no error
+    };
+    const handleFileNameChange = (e) => {
+        const newFileName = e.target.value;
+        setFileName(newFileName);
+        setFileNameError(validateFileName(newFileName));
+    };
     return (
         <Modal size="lg" show={show} onHide={onClose}>
             <Modal.Header closeButton>
@@ -14,10 +31,14 @@ const SaveConfigModal = ({ show, onClose, onSave, fileName, setFileName, fileNam
                         <Form.Control
                             type="text"
                             value={fileName}
-                            onChange={(e) => setFileName(e.target.value)}
+                            onChange={handleFileNameChange}
                             isInvalid={!!fileNameError}
                         />
                         <Form.Control.Feedback type="invalid">{fileNameError}</Form.Control.Feedback>
+                        <Form.Text muted>
+                            Enter the name of the configuration file (without extension). Avoid special
+                            characters.
+                        </Form.Text>
                     </Form.Group>
                 </Container>
             </Modal.Body>

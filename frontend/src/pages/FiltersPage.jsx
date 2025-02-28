@@ -5,6 +5,7 @@ import FilterConfigModal from "../components/FilterConfigModal";
 import SaveConfigModal from "../components/SaveConfigModal";
 import {fetchFilters, addFilter, removeFilter} from "../services/filterService";
 import {fetchSignals} from "../services/signalService";
+import {saveConfiguration} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 
 function FiltersPage() {
@@ -14,6 +15,8 @@ function FiltersPage() {
     const [selectedFilter, setSelectedFilter] = useState(null);
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
+    const [fileName, setFileName] = useState("");
+    const [fileNameError, setFileNameError] = useState("");
 
     useEffect(() => {
         fetchFilters().then(setAvailableFilters);
@@ -32,23 +35,29 @@ function FiltersPage() {
     }
 
     const handleRemoveFilter = async (filter) => {
-        const result = await removeFilter(filter.id);
+        console.log("Removing filter:", filter);
+        // send index instead of filter object
+        const result = await removeFilter(selectedFilters.indexOf(filter));
         if (result === "0") {
             setSelectedFilters(selectedFilters.filter(f => f.id !== filter.id));
+
         }
     }
 
     const handleRemoveAllFilters = async () => {
         const filtersToRemove = [...selectedFilters];
-
+        const successfullyRemovedFilters = [];
         for (let i = filtersToRemove.length - 1; i >= 0; i--) {
             const result = await removeFilter(i);
             if (result === 1) {
                 console.error(`Error removing filter at index ${i}`);
                 break;
             }
+            successfullyRemovedFilters.push(filtersToRemove[i]);
+
         }
         setSelectedFilter(null);
+        setSelectedFilters(selectedFilters.filter(f => !successfullyRemovedFilters.includes(f)));
     }
 
     const handleSaveConfiguration = () => {
@@ -70,14 +79,21 @@ function FiltersPage() {
                         />
                     </Col>
                     <Col xs={12} md={12} lg={6}>
-                        <AvailableFilterList filters={availablefFilters} onFilterSelect={handleAddFilter} />
+                        <AvailableFilterList filters={availablefFilters} onFilterSelect={handleAddFilter}/>
                     </Col>
                 </Row>
             </Container>
 
             <FilterConfigModal filter={selectedFilter} show={showConfigModal}
-                               onClose={() => setShowConfigModal(false)}/>
-            <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}/>
+                               onClose={() => setShowConfigModal(false)}
+                               signals={signals}
+            />
+            <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}
+                             fileName={fileName} setFileName={setFileName} fileNameError={fileNameError}
+                             setFileNameError={setFileNameError}
+                             onSave={() => saveConfiguration(fileName)}
+
+            />
         </Container>
     );
 }

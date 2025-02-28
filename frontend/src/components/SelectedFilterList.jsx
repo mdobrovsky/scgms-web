@@ -6,6 +6,21 @@ const SelectedFilterList = ({filters, onFilterSelect, handleConfigureFilter, han
                                 // eslint-disable-next-line react/prop-types
                                 handleRemoveAllFilters, handleSaveConfiguration}) => {
     const [selectedFilter, setSelectedFilter] = React.useState(null);
+
+    const handleSelectFilter = (filter) => {
+        setSelectedFilter(filter);
+        onFilterSelect(filter)
+    }
+
+    const handleRemoveFilter2 = (filter) => {
+        handleRemoveFilter(filter);
+        setSelectedFilter(null);
+    }
+
+    const handleRemoveAllFilters2 = () => {
+        handleRemoveAllFilters();
+        setSelectedFilter(null);
+    }
     return (
         <Card className="p-3 mt-4">
             <Card.Title as="h3">Applied Filters</Card.Title>
@@ -16,7 +31,7 @@ const SelectedFilterList = ({filters, onFilterSelect, handleConfigureFilter, han
                             key={`${filter.guid}-${index}`}
                             // className={`filter-item ${selectedFilterIndex === index ? 'selected' : ''}`}
                             action
-                            onClick={() => onFilterSelect(filter)}
+                            onClick={() => handleSelectFilter(filter)}
                         >
                             {filter.description}
                         </ListGroup.Item>
@@ -30,11 +45,11 @@ const SelectedFilterList = ({filters, onFilterSelect, handleConfigureFilter, han
                         disabled={selectedFilter === null}>
                     Configure
                 </Button>
-                <Button variant="outline-dark" onClick={handleRemoveFilter}
+                <Button variant="outline-dark" onClick={() => handleRemoveFilter2(selectedFilter)}
                         disabled={selectedFilter === null}>
                     Remove
                 </Button>
-                <Button variant="outline-dark" onClick={handleRemoveAllFilters}
+                <Button variant="outline-dark" onClick={handleRemoveAllFilters2}
                         disabled={filters.length === 0}>
                     Remove All
                 </Button>

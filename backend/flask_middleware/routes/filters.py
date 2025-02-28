@@ -20,5 +20,6 @@ def add_filter():
 def remove_filter():
     data = request.get_json()
     index = data.get("index", 0)
+    print("removing filter at index: ", index)
     result = remove_filter_service(index)
     return jsonify({"result": result})
