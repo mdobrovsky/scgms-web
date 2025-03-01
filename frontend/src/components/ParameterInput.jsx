@@ -1,10 +1,12 @@
-import React from "react";
 import {Form} from "react-bootstrap";
+import PropTypes from "prop-types";
 
 const ParameterInput = ({parameter, signals, models, solvers, selectedModel, setSelectedModel}) => {
     switch (parameter.parameter_type) {
         case "ptBool":
             return <Form.Check type="switch" id={parameter.ui_parameter_name}/>;
+        case "ptRatTime":
+            return <Form.Control id={parameter.ui_parameter_name} type="time" step={1}/>;
         case "ptInt64":
         case "ptDouble":
             return <Form.Control id={parameter.ui_parameter_name} type="number"/>;
@@ -27,11 +29,26 @@ const ParameterInput = ({parameter, signals, models, solvers, selectedModel, set
                              onChange={(e) =>
                                  setSelectedModel(models.find((model) => model.id === e.target.value))}>
                     <option value="">Select a model...</option>
-                    {models.map((model) => (
+                    {models.filter((model) => model.flags === "Signal_Model")
+                        .map((model) => (
                         <option key={model.id} value={model.id}>
                             {model.description}
                         </option>
                     ))}
+                </Form.Select>
+            );
+        case "ptDiscrete_Model_Id":
+            return (
+                <Form.Select id={parameter.ui_parameter_name}
+                             onChange={(e) =>
+                                 setSelectedModel(models.find((model) => model.id === e.target.value))}>
+                    <option value="">Select a model...</option>
+                    {models.filter((model) => model.flags === "Discrete_Model")
+                        .map((model) => (
+                            <option key={model.id} value={model.id}>
+                                {model.description}
+                            </option>
+                        ))}
                 </Form.Select>
             );
         case "ptSolver_Id":
@@ -72,4 +89,36 @@ const ParameterInput = ({parameter, signals, models, solvers, selectedModel, set
     }
 };
 
+ParameterInput.propTypes = {
+    parameter: PropTypes.shape({
+        parameter_type: PropTypes.string.isRequired,
+        ui_parameter_name: PropTypes.string.isRequired,
+    }).isRequired,
+    signals: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            signal_description: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+    models: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+            flags: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+    solvers: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+    selectedModel: PropTypes.shape({
+        id: PropTypes.string,
+        calculated_signal_ids: PropTypes.arrayOf(PropTypes.string),
+    }),
+    setSelectedModel: PropTypes.func.isRequired,
+};
+
 export default ParameterInput;
+

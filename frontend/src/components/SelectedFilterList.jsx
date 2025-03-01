@@ -1,9 +1,8 @@
 import React from "react";
-import {Button, ButtonGroup, Card, Container, ListGroup} from "react-bootstrap";
+import {Button, ButtonGroup, Card, ListGroup} from "react-bootstrap";
+import PropTypes from "prop-types";
 
-// eslint-disable-next-line react/prop-types
 const SelectedFilterList = ({filters, onFilterSelect, handleConfigureFilter, handleRemoveFilter,
-                                // eslint-disable-next-line react/prop-types
                                 handleRemoveAllFilters, handleSaveConfiguration}) => {
     const [selectedFilter, setSelectedFilter] = React.useState(null);
 
@@ -107,5 +106,19 @@ const SelectedFilterList = ({filters, onFilterSelect, handleConfigureFilter, han
 
                         </Card>
  */
+
+SelectedFilterList.propTypes = {
+    filters: PropTypes.arrayOf(
+        PropTypes.shape({
+            guid: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+    onFilterSelect: PropTypes.func.isRequired,
+    handleConfigureFilter: PropTypes.func.isRequired,
+    handleRemoveFilter: PropTypes.func.isRequired,
+    handleRemoveAllFilters: PropTypes.func.isRequired,
+    handleSaveConfiguration: PropTypes.func.isRequired,
+};
 
 export default SelectedFilterList;

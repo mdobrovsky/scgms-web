@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import {useState, useEffect} from "react";
 import {Container, Row, Col} from "react-bootstrap";
 import AvailableFilterList from "../components/AvailableFilterList.jsx";
 import FilterConfigModal from "../components/FilterConfigModal";
