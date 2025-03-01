@@ -63,6 +63,57 @@ struct SignalInfo {
     int visualization;
 };
 
+struct ModelInfo {
+    std::string id;
+    std::string flags;
+    std::string description;
+    std::string db_table_name;
+    size_t number_of_parameters;
+    size_t number_of_segment_specific_parameters;
+    std::vector<std::string> parameter_types;
+    std::vector<std::string> parameter_ui_names;
+    std::vector<std::string> parameter_db_column_names;
+    std::vector<double> lower_bound;
+    std::vector<double> default_values;
+    std::vector<double> upper_bound;
+    size_t number_of_calculated_signals;
+    std::vector<std::string> calculated_signal_ids;
+    std::vector<std::string> reference_signal_ids;
+};
+
+struct SolverInfo {
+    std::string id;
+    std::string description;
+    bool specialized;
+    size_t specialized_count;
+    std::vector<std::string> specialized_models;
+};
+
+struct MetricInfo {
+    std::string id;
+    std::string description;
+};
+
+MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
+    MetricInfo metric;
+    metric.id = Narrow_WString(GUID_To_WString(desc.id));
+    metric.description = Narrow_WString(desc.description);
+    return metric;
+}
+
+SolverInfo convert_solver_descriptor(const scgms::TSolver_Descriptor &desc) {
+    SolverInfo solver;
+    solver.id = Narrow_WString(GUID_To_WString(desc.id));
+    solver.description = Narrow_WString(desc.description);
+    solver.specialized = desc.specialized;
+    solver.specialized_count = desc.specialized_count;
+    for (size_t i = 0; i < desc.specialized_count; ++i) {
+        solver.specialized_models.push_back(Narrow_WString(GUID_To_WString(desc.specialized_models[i])));
+    }
+    return solver;
+}
+
+
 std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
     switch (type) {
         case scgms::NParameter_Type::ptNull:
@@ -219,7 +270,7 @@ std::string create_parameters(const scgms::TFilter_Descriptor &filter) {
     return "0";
 }
 
-SignalInfo ConvertSignalDescriptor(const scgms::TSignal_Descriptor &desc) {
+SignalInfo convert_signal_descriptor(const scgms::TSignal_Descriptor &desc) {
     return SignalInfo{
         desc.fill_color,
         Narrow_WString(GUID_To_WString(desc.id)),
@@ -238,10 +289,97 @@ std::vector<SignalInfo> get_available_signals() {
     const scgms::CSignal_Description signal_descriptors{};
     std::vector<SignalInfo> signals;
     signal_descriptors.for_each([&signals](const scgms::TSignal_Descriptor &desc) {
-        signals.push_back(ConvertSignalDescriptor(desc));
+        signals.push_back(convert_signal_descriptor(desc));
     });
     return signals;
 }
+
+ModelInfo convert_model_descriptor(const scgms::TModel_Descriptor &desc) {
+    ModelInfo model;
+    model.id = Narrow_WString(GUID_To_WString(desc.id));
+    switch (desc.flags) {
+        case scgms::NModel_Flags::None:
+            model.flags = "None";
+            break;
+        case scgms::NModel_Flags::Signal_Model:
+            model.flags = "Signal_Model";
+            break;
+        case scgms::NModel_Flags::Discrete_Model:
+            model.flags = "Discrete_Model";
+            break;
+    }
+    model.description = Narrow_WString(desc.description);
+    model.db_table_name = desc.db_table_name != nullptr ? Narrow_WString(desc.db_table_name) : "";
+    model.number_of_parameters = desc.total_number_of_parameters;
+    model.number_of_segment_specific_parameters = desc.number_of_segment_specific_parameters;
+    for (size_t i = 0; i < desc.total_number_of_parameters; ++i) {
+        scgms::NModel_Parameter_Value type = desc.parameter_types[i];
+        switch (type) {
+            case scgms::NModel_Parameter_Value::mptDouble:
+                model.parameter_types.emplace_back("mptDouble");
+                break;
+            case scgms::NModel_Parameter_Value::mptTime:
+                model.parameter_types.emplace_back("mptTime");
+                break;
+            case scgms::NModel_Parameter_Value::mptBool:
+                model.parameter_types.emplace_back("mptBool");
+                break;
+        }
+        model.parameter_ui_names.push_back(Narrow_WString(desc.parameter_ui_names[i]));
+        if (desc.parameter_db_column_names) {
+            desc.parameter_db_column_names[i] == nullptr
+                ? model.parameter_db_column_names.push_back("")
+                : model.parameter_db_column_names.push_back(Narrow_WString(desc.parameter_db_column_names[i]));
+        }
+        else {
+            model.parameter_db_column_names.push_back( "");
+        }
+
+        model.lower_bound.push_back(desc.lower_bound[i]);
+        model.default_values.push_back(desc.default_values[i]);
+        model.upper_bound.push_back(desc.upper_bound[i]);
+    }
+    model.number_of_calculated_signals = desc.number_of_calculated_signals;
+    for (size_t i = 0; i < desc.number_of_calculated_signals; ++i) {
+        model.calculated_signal_ids.push_back(Narrow_WString(GUID_To_WString(desc.calculated_signal_ids[i])));
+        model.reference_signal_ids.push_back(Narrow_WString(GUID_To_WString(desc.reference_signal_ids[i])));
+    }
+    return model;
+}
+
+std::vector<ModelInfo> get_available_models() {
+    std::vector model_desc = scgms::get_model_descriptor_list();
+    std::vector<ModelInfo> models;
+    for (const scgms::TModel_Descriptor &desc: model_desc) {
+        ModelInfo model = convert_model_descriptor(desc);
+        models.push_back(model);
+    }
+    return models;
+
+}
+
+std::vector<SolverInfo> get_available_solvers() {
+    std::vector solver_desc = scgms::get_solver_descriptor_list();
+    std::vector<SolverInfo> solvers;
+    for (const scgms::TSolver_Descriptor &desc: solver_desc) {
+        SolverInfo solver = convert_solver_descriptor(desc);
+        solvers.push_back(solver);
+    }
+    return solvers;
+}
+
+std::vector<MetricInfo> get_available_metrics() {
+    std::vector<scgms::TMetric_Descriptor> metric_desc = scgms::get_metric_descriptor_list();
+    std::vector<MetricInfo> metrics;
+    for (const scgms::TMetric_Descriptor &desc: metric_desc) {
+        MetricInfo metric = convert_metric_descriptor(desc);
+        metrics.push_back(metric);
+    }
+    return metrics;
+}
+
+
+
 
 
 std::vector<FilterInfo> get_available_filters() {
@@ -394,25 +532,60 @@ PYBIND11_MODULE(scgms_wrapper, m) {
 
     // Binding for SignalInfo
     py::class_<SignalInfo>(m, "SignalInfo")
-        .def_readonly("fill_color", &SignalInfo::fill_color)
-        .def_readonly("id", &SignalInfo::id)
-        .def_readonly("mark", &SignalInfo::mark)
-        .def_readonly("signal_description", &SignalInfo::signal_description)
-        .def_readonly("stroke_color", &SignalInfo::stroke_color)
-        .def_readonly("stroke_pattern", &SignalInfo::stroke_pattern)
-        .def_readonly("unit_description", &SignalInfo::unit_description)
-        .def_readonly("unit_id", &SignalInfo::unit_id)
-        .def_readonly("value_scale", &SignalInfo::value_scale)
-        .def_readonly("visualization", &SignalInfo::visualization);
+            .def_readonly("fill_color", &SignalInfo::fill_color)
+            .def_readonly("id", &SignalInfo::id)
+            .def_readonly("mark", &SignalInfo::mark)
+            .def_readonly("signal_description", &SignalInfo::signal_description)
+            .def_readonly("stroke_color", &SignalInfo::stroke_color)
+            .def_readonly("stroke_pattern", &SignalInfo::stroke_pattern)
+            .def_readonly("unit_description", &SignalInfo::unit_description)
+            .def_readonly("unit_id", &SignalInfo::unit_id)
+            .def_readonly("value_scale", &SignalInfo::value_scale)
+            .def_readonly("visualization", &SignalInfo::visualization);
 
-    py::bind_vector<std::vector<SignalInfo>>(m, "SignalInfoVector");
+    py::bind_vector<std::vector<SignalInfo> >(m, "SignalInfoVector");
     m.def("get_available_signals", &get_available_signals, "Returns available signals");
+
+    // Binding for ModelInfo
+    py::class_<ModelInfo>(m, "ModelInfo")
+            .def_readonly("id", &ModelInfo::id)
+            .def_readonly("flags", &ModelInfo::flags)
+            .def_readonly("description", &ModelInfo::description)
+            .def_readonly("db_table_name", &ModelInfo::db_table_name)
+            .def_readonly("number_of_parameters", &ModelInfo::number_of_parameters)
+            .def_readonly("number_of_segment_specific_parameters", &ModelInfo::number_of_segment_specific_parameters)
+            .def_readonly("parameter_types", &ModelInfo::parameter_types)
+            .def_readonly("parameter_ui_names", &ModelInfo::parameter_ui_names)
+            .def_readonly("parameter_db_column_names", &ModelInfo::parameter_db_column_names)
+            .def_readonly("lower_bound", &ModelInfo::lower_bound)
+            .def_readonly("default_values", &ModelInfo::default_values)
+            .def_readonly("upper_bound", &ModelInfo::upper_bound)
+            .def_readonly("number_of_calculated_signals", &ModelInfo::number_of_calculated_signals)
+            .def_readonly("calculated_signal_ids", &ModelInfo::calculated_signal_ids)
+            .def_readonly("reference_signal_ids", &ModelInfo::reference_signal_ids);
+    py::bind_vector<std::vector<ModelInfo> >(m, "ModelInfoVector");
+    m.def("get_available_models", &get_available_models, "Returns available models");
+
+    // Binding for SolverInfo
+    py::class_<SolverInfo>(m, "SolverInfo")
+            .def_readonly("id", &SolverInfo::id)
+            .def_readonly("description", &SolverInfo::description)
+            .def_readonly("specialized", &SolverInfo::specialized)
+            .def_readonly("specialized_count", &SolverInfo::specialized_count)
+            .def_readonly("specialized_models", &SolverInfo::specialized_models);
+    py::bind_vector<std::vector<SolverInfo> >(m, "SolverInfoVector");
+    m.def("get_available_solvers", &get_available_solvers, "Returns available solvers");
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    // std::cout << wstringToUtf8(listAvailableFilters());
-    // listAvailableFilters();
+
+    // std::vector<MetricInfo> metrics = get_available_metrics();
+    // for (const MetricInfo &metric: metrics) {
+    //     std::cout << "Metric ID: " << metric.id << std::endl;
+    //     std::cout << "Description: " << metric.description << std::endl;
+    //     std::cout << std::endl;
+    // }
 
 
     return 0;

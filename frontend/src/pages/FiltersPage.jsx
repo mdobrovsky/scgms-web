@@ -5,13 +5,18 @@ import FilterConfigModal from "../components/FilterConfigModal";
 import SaveConfigModal from "../components/SaveConfigModal";
 import {fetchFilters, addFilter, removeFilter} from "../services/filterService";
 import {fetchSignals} from "../services/signalService";
+import {fetchModels} from "../services/modelService.jsx";
+import {fetchSolvers} from "../services/solverService.jsx";
 import {saveConfiguration} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 
 function FiltersPage() {
     const [availablefFilters, setAvailableFilters] = useState([]);
     const [selectedFilters, setSelectedFilters] = useState([]);
+    const [selectedModel, setSelectedModel] = useState(null);
     const [signals, setSignals] = useState([]);
+    const [models, setModels] = useState([]);
+    const [solvers, setSolvers] = useState([]);
     const [selectedFilter, setSelectedFilter] = useState(null);
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
@@ -19,15 +24,39 @@ function FiltersPage() {
     const [fileNameError, setFileNameError] = useState("");
 
     useEffect(() => {
-        fetchFilters().then(setAvailableFilters);
-        fetchSignals().then(setSignals);
+        fetchFilters().then(data => {
+            console.log("Fetched Filters:", data);
+            setAvailableFilters(data);
+        });
+
+        fetchSignals().then(data => {
+            console.log("Fetched Signals:", data);
+            setSignals(data);
+        });
+
+        fetchModels().then(data => {
+            console.log("Fetched Models:", data);
+            setModels(data);
+        });
+
+        fetchSolvers().then(data => {
+            console.log("Fetched Solvers:", data);
+            setSolvers(data);
+        });
+
     }, []);
+
 
     const handleAddFilter = async (filter) => {
         const result = await addFilter(filter.id);
         if (result === "0") {
             setSelectedFilters([...selectedFilters, filter]);
         }
+    }
+
+    const handleCloseConfigModal = () => {
+        setShowConfigModal(false);
+        setSelectedModel(null);
     }
 
     const handleConfigureFilter = () => {
@@ -85,11 +114,18 @@ function FiltersPage() {
             </Container>
 
             <FilterConfigModal filter={selectedFilter} show={showConfigModal}
-                               onClose={() => setShowConfigModal(false)}
+                               onClose={handleCloseConfigModal}
                                signals={signals}
+                               models={models}
+                                 solvers={solvers}
+                               selectedModel={selectedModel}
+                               setSelectedModel={setSelectedModel}
+
             />
             <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}
-                             fileName={fileName} setFileName={setFileName} fileNameError={fileNameError}
+                             fileName={fileName}
+                             setFileName={setFileName}
+                             fileNameError={fileNameError}
                              setFileNameError={setFileNameError}
                              onSave={() => saveConfiguration(fileName)}
 

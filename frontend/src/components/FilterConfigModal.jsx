@@ -2,7 +2,7 @@ import React from "react";
 import {Modal, Button, Container, Row, Col, Form} from "react-bootstrap";
 import ParameterInput from "./ParameterInput";
 
-const FilterConfigModal = ({filter, show, onClose, signals}) => {
+const FilterConfigModal = ({filter, show, onClose, signals, models, solvers, selectedModel, setSelectedModel}) => {
     if (!filter) return null;
 
     return (
@@ -13,10 +13,6 @@ const FilterConfigModal = ({filter, show, onClose, signals}) => {
             <Modal.Body>
                 <Container>
                     {filter.parameters.map((parameter, index) => (
-                        // <div key={index}>
-                        //     <p>{param.ui_parameter_name}</p>
-                        //     <ParameterInput key={index} parameter={param}/>
-                        // </div>
                         <Container key={index} className="flex-column">
                             <Row style={{paddingTop: "10px"}}>
                                 <Col xs={6} md={6}>
@@ -24,7 +20,13 @@ const FilterConfigModal = ({filter, show, onClose, signals}) => {
                                     <p className="small text-muted">{parameter.ui_parameter_tooltip ? (parameter.ui_parameter_tooltip) : ("")}</p>
                                 </Col>
                                 <Col lg={6} md={6}>
-                                    <ParameterInput parameter={parameter} signals={signals}/>
+                                    <ParameterInput parameter={parameter}
+                                                    signals={signals}
+                                                    models={models}
+                                                    solvers={solvers}
+                                                    selectedModel={selectedModel}
+                                                    setSelectedModel={setSelectedModel}
+                                    />
                                     <Form.Text id={parameter.ui_parameter_name} muted>
                                         {parameter.parameter_type}
                                     </Form.Text>
