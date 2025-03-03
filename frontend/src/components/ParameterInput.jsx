@@ -1,98 +1,182 @@
 import {Form} from "react-bootstrap";
 import PropTypes from "prop-types";
 
-const ParameterInput = ({parameter, signals, models, solvers, selectedModel, setSelectedModel}) => {
-    switch (parameter.parameter_type) {
-        case "ptBool":
-            return <Form.Check type="switch" id={parameter.ui_parameter_name}/>;
-        case "ptRatTime":
-            return <Form.Control id={parameter.ui_parameter_name} type="time" step={1}/>;
-        case "ptInt64":
-        case "ptDouble":
-            return <Form.Control id={parameter.ui_parameter_name} type="number"/>;
-        case "ptWChar_Array":
-            return <Form.Control id={parameter.ui_parameter_name} type="text"/>;
-        case "ptSignal_Id":
-            return (
-                <Form.Select id={parameter.ui_parameter_name}>
-                    <option value="">Select a signal...</option>
-                    {signals.map((signal) => (
-                        <option key={signal.id} value={signal.id}>
-                            {signal.signal_description}
-                        </option>
-                    ))}
-                </Form.Select>
-            );
-        case "ptSignal_Model_Id":
-            return (
-                <Form.Select id={parameter.ui_parameter_name}
-                             onChange={(e) =>
-                                 setSelectedModel(models.find((model) => model.id === e.target.value))}>
-                    <option value="">Select a model...</option>
-                    {models.filter((model) => model.flags === "Signal_Model")
-                        .map((model) => (
-                        <option key={model.id} value={model.id}>
-                            {model.description}
-                        </option>
-                    ))}
-                </Form.Select>
-            );
-        case "ptDiscrete_Model_Id":
-            return (
-                <Form.Select id={parameter.ui_parameter_name}
-                             onChange={(e) =>
-                                 setSelectedModel(models.find((model) => model.id === e.target.value))}>
-                    <option value="">Select a model...</option>
-                    {models.filter((model) => model.flags === "Discrete_Model")
-                        .map((model) => (
-                            <option key={model.id} value={model.id}>
-                                {model.description}
+
+const ParameterInput = ({parameter, signals, models, solvers, selectedModel, setSelectedModel, setFilter, filter}) => {
+
+        switch (parameter.parameter_type) {
+            case "ptBool":
+
+                return <Form.Check type="switch" id={parameter.config_parameter_name}
+                                   name={parameter.config_parameter_name} checked={parameter.value === "true"}
+                                   onChange={(e) => {
+                                       setFilter((prevFilter) => ({
+                                           ...prevFilter,
+                                           parameters: prevFilter.parameters.map((p) =>
+                                               p.config_parameter_name === parameter.config_parameter_name
+                                                   ? {...p, value: e.target.checked ? "true" : "false"}
+                                                   : p
+                                           ),
+                                       }));
+                                   }}/>;
+
+            case "ptRatTime":
+                return <Form.Control id={parameter.config_parameter_name} type="time" step={1}
+                                     name={parameter.config_parameter_name} defaultValue={parameter.value}/>;
+            case "ptInt64":
+            case "ptDouble":
+                return <Form.Control id={parameter.config_parameter_name} type="number"
+                                     name={parameter.config_parameter_name} defaultValue={parameter.value}/>;
+            case "ptWChar_Array":
+                return <Form.Control id={parameter.config_parameter_name} type="text"
+                                     name={parameter.config_parameter_name} defaultValue={parameter.value}/>;
+            case "ptSignal_Id":
+                return (
+                    <Form.Select id={parameter.config_parameter_name} name={parameter.config_parameter_name}
+                                 value={parameter.value}>
+                        <option value="">Select a signal...</option>
+                        {signals.map((signal) => (
+                            <option key={signal.id} value={signal.id}>
+                                {signal.signal_description}
                             </option>
                         ))}
-                </Form.Select>
-            );
-        case "ptSolver_Id":
-            return (
-                <Form.Select id={parameter.ui_parameter_name}
-                             >
-                    <option value="">Select a solver...</option>
-                    {solvers.map((solver) => (
-                        <option key={solver.id} value={solver.id}>
-                            {solver.description}
-                        </option>
-                    ))}
-                </Form.Select>
-            );
-        case "ptModel_Produced_Signal_Id":
-            if (!selectedModel) {
-                return <Form.Control disabled value="Select a model first"/>;
+                    </Form.Select>
+                );
+            case "ptSignal_Model_Id":
+                return (
+                    <Form.Select
+                        id={parameter.config_parameter_name}
+                        name={parameter.config_parameter_name}
+                        value={parameter.value || ""}
+                        onChange={(e) => {
+                            const selected = models.find((model) => model.id === e.target.value);
+                            setSelectedModel(selected);
+                            setFilter((prevFilter) => ({
+                                ...prevFilter,
+                                parameters: prevFilter.parameters.map((p) =>
+                                    p.config_parameter_name === parameter.config_parameter_name
+                                        ? {...p, value: e.target.value}
+                                        : p
+                                ),
+                            }));
+                        }}
+                    >
+                        <option value="">Select a model...</option>
+
+                        {models.filter((model) => model.flags === "Signal_Model")
+                            .map((model) => (
+                                <option key={model.id} value={model.id}>
+                                    {model.description}
+                                </option>
+                            ))}
+                    </Form.Select>
+                );
+            case "ptDiscrete_Model_Id":
+                return (
+                    <Form.Select
+                        id={parameter.config_parameter_name}
+                        name={parameter.config_parameter_name}
+                        value={parameter.value || ""}
+                        onChange={(e) => {
+                            const selected = models.find((model) => model.id === e.target.value);
+                            setSelectedModel(selected);
+                            setFilter((prevFilter) => ({
+                                ...prevFilter,
+                                parameters: prevFilter.parameters.map((p) =>
+                                    p.config_parameter_name === parameter.config_parameter_name
+                                        ? {...p, value: e.target.value}
+                                        : p
+                                ),
+                            }));
+                        }}
+                    >
+                        <option value="">Select a model...</option>
+                        {models.filter((model) => model.flags === "Discrete_Model")
+                            .map((model) => (
+                                <option key={model.id} value={model.id}>
+                                    {model.description}
+                                </option>
+                            ))}
+                    </Form.Select>
+                );
+            case "ptSolver_Id":
+                return (
+                    <Form.Select
+                        id={parameter.config_parameter_name}
+                        name={parameter.config_parameter_name}
+                        value={parameter.value || ""}
+                        onChange={(e) => {
+                            setFilter((prevFilter) => ({
+                                ...prevFilter,
+                                parameters: prevFilter.parameters.map((p) =>
+                                    p.config_parameter_name === parameter.config_parameter_name
+                                        ? {...p, value: e.target.value}
+                                        : p
+                                ),
+                            }));
+                        }}
+                    >
+                        <option value="">Select a solver...</option>
+                        {solvers.map((solver) => (
+                            <option key={solver.id} value={solver.id}>
+                                {solver.description}
+                            </option>
+                        ))}
+                    </Form.Select>
+                );
+            case "ptModel_Produced_Signal_Id": {
+                const selectedModelId = filter.parameters.find((p) =>
+                    p.parameter_type === "ptDiscrete_Model_Id" || p.parameter_type === "ptSignal_Model_Id")?.value;
+                if (selectedModelId !== "") {
+                    setSelectedModel(models.find((model) => model.id === selectedModelId));
+                }
+
+                {
+                    if (!selectedModel) {
+                        return <Form.Control disabled value="Select a model first"/>;
+                    }
+
+                    const producedSignals = signals.filter((signal) =>
+                        selectedModel.calculated_signal_ids.includes(signal.id)
+                    );
+
+                    return (
+                        <Form.Select
+                            id={parameter.config_parameter_name}
+                            name={parameter.config_parameter_name}
+                            value={parameter.value || ""}
+                            onChange={(e) => {
+                                setFilter((prevFilter) => ({
+                                    ...prevFilter,
+                                    parameters: prevFilter.parameters.map((p) =>
+                                        p.config_parameter_name === parameter.config_parameter_name
+                                            ? {...p, value: e.target.value}
+                                            : p
+                                    ),
+                                }));
+                            }}
+                        >
+                            <option value="">Select a signal...</option>
+                            {producedSignals.map((signal) => (
+                                <option key={signal.id} value={signal.id}>
+                                    {signal.signal_description}
+                                </option>
+                            ))}
+                        </Form.Select>
+                    );
+                }
             }
-            console.log("Selected model: ", selectedModel);
-            var producedSignals = signals.filter((signal) =>
-                selectedModel.calculated_signal_ids.includes(signal.id)
-            );
-            console.log("Produced signals: ", producedSignals);
-
-
-            return (
-                <Form.Select id={parameter.ui_parameter_name}>
-                    <option value="">Select a signal...</option>
-                    {producedSignals.map((signal) => (
-                        <option key={signal.id} value={signal.id}>
-                            {signal.signal_description}
-                        </option>
-                    ))}
-                </Form.Select>
-            );
-        default:
-            return <Form.Control disabled value={`Unsupported: ${parameter.parameter_type}`}/>;
+            default:
+                return <Form.Control disabled value={`Unsupported: ${parameter.parameter_type}`}/>;
+        }
     }
-};
+;
 
 ParameterInput.propTypes = {
     parameter: PropTypes.shape({
         parameter_type: PropTypes.string.isRequired,
-        ui_parameter_name: PropTypes.string.isRequired,
+        config_parameter_name: PropTypes.string.isRequired,
+        value: PropTypes.any,
     }).isRequired,
     signals: PropTypes.arrayOf(
         PropTypes.shape({
@@ -118,6 +202,18 @@ ParameterInput.propTypes = {
         calculated_signal_ids: PropTypes.arrayOf(PropTypes.string),
     }),
     setSelectedModel: PropTypes.func.isRequired,
+    setFilter: PropTypes.func.isRequired,
+    filter: PropTypes.shape({
+        description: PropTypes.string.isRequired,
+        parameters: PropTypes.arrayOf(
+            PropTypes.shape({
+                parameter_type: PropTypes.string.isRequired,
+                ui_parameter_name: PropTypes.string.isRequired,
+                ui_parameter_tooltip: PropTypes.string,
+                value: PropTypes.any,
+            })
+        ).isRequired,
+    }).isRequired,
 };
 
 export default ParameterInput;

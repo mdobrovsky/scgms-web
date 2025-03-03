@@ -1,10 +1,10 @@
 import axios from "axios";
-import { ADD_FILTER_URL, FETCH_FILTERS_URL, REMOVE_FILTER_URL } from "../constants/apiConstants";
+import {ADD_FILTER_URL, CONFIGURE_FILTER_URL, FETCH_FILTERS_URL, REMOVE_FILTER_URL} from "../constants/apiConstants";
 
 export const fetchFilters = async () => {
     try {
         const response = await axios.get(FETCH_FILTERS_URL);
-        return response.data.filters;
+        return response.data.filters.sort((a, b) => a.description.localeCompare(b.description));
     } catch (error) {
         console.error("Error fetching filters:", error);
         return [];
@@ -30,3 +30,13 @@ export const removeFilter = async (index) => {
         return "1";
     }
 };
+
+export const configureFilter = async (filter) => {
+    try {
+        const response = await axios.post(CONFIGURE_FILTER_URL, { filter });
+        return response.data.result;
+    } catch (error) {
+        console.error("Error configuring filter:", error);
+        return "1";
+    }
+}

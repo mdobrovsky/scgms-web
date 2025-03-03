@@ -11,7 +11,7 @@ import {saveConfiguration} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 
 function FiltersPage() {
-    const [availablefFilters, setAvailableFilters] = useState([]);
+    const [availableFilters, setAvailableFilters] = useState([]);
     const [selectedFilters, setSelectedFilters] = useState([]);
     const [selectedModel, setSelectedModel] = useState(null);
     const [signals, setSignals] = useState([]);
@@ -64,7 +64,7 @@ function FiltersPage() {
     }
 
     const handleRemoveFilter = async (filter) => {
-        console.log("Removing filter:", filter);
+        // console.log("Removing filter:", filter);
         // send index instead of filter object
         const result = await removeFilter(selectedFilters.indexOf(filter));
         if (result === "0") {
@@ -108,7 +108,7 @@ function FiltersPage() {
                         />
                     </Col>
                     <Col xs={12} md={12} lg={6}>
-                        <AvailableFilterList filters={availablefFilters} onFilterSelect={handleAddFilter}/>
+                        <AvailableFilterList filters={availableFilters} onFilterSelect={handleAddFilter}/>
                     </Col>
                 </Row>
             </Container>
@@ -117,9 +117,11 @@ function FiltersPage() {
                                onClose={handleCloseConfigModal}
                                signals={signals}
                                models={models}
-                                 solvers={solvers}
+                               solvers={solvers}
                                selectedModel={selectedModel}
                                setSelectedModel={setSelectedModel}
+                               setFilter={setSelectedFilter}
+                               setSelectedFilters={setSelectedFilters}
 
             />
             <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}

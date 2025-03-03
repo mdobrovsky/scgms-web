@@ -1,5 +1,6 @@
 import scgms_wrapper
 
+
 # Convert FilterParameter object to dictionary
 def filter_parameter_to_dict(param):
     return {
@@ -7,7 +8,9 @@ def filter_parameter_to_dict(param):
         "ui_parameter_name": param.ui_parameter_name,
         "config_parameter_name": param.config_parameter_name,
         "ui_parameter_tooltip": param.ui_parameter_tooltip,
+        "value": param.default_value,
     }
+
 
 # Convert FilterInfo object to dictionary
 def filter_info_to_dict(filter_info):
@@ -19,12 +22,26 @@ def filter_info_to_dict(filter_info):
         "parameters": [filter_parameter_to_dict(p) for p in filter_info.parameters],
     }
 
+
 def get_available_filters():
     filters = list(scgms_wrapper.get_available_filters())
     return [filter_info_to_dict(f) for f in filters]
 
+
 def add_filter_service(guid_string):
     return scgms_wrapper.add_filter(guid_string)
 
+
 def remove_filter_service(index):
     return scgms_wrapper.remove_filter(index)
+
+
+def configure_filter_service(filter, parameters):
+    print("Configuring filter: ", filter)
+    for p in parameters:
+        res = scgms_wrapper.configure_filter(filter["id"], p["parameter_type"],
+                                       p["config_parameter_name"],
+                                       p["value"])
+        if res != "0":
+            return "1"
+    return "0"
