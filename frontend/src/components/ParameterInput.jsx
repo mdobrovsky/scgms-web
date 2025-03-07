@@ -166,6 +166,8 @@ const ParameterInput = ({parameter, signals, models, solvers, selectedModel, set
                     );
                 }
             }
+            case "ptNull":
+                return <> </>;
             default:
                 return <Form.Control disabled value={`Unsupported: ${parameter.parameter_type}`}/>;
         }

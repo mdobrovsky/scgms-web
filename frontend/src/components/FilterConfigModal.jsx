@@ -1,4 +1,4 @@
-import {Modal, Button, Container, Row, Col, Form, Spinner} from "react-bootstrap";
+import {Modal, Button, Container, Row, Col, Form, Spinner, Nav} from "react-bootstrap";
 import ParameterInput from "./ParameterInput";
 import PropTypes from "prop-types";
 import {useRef, useEffect, useState} from "react";
@@ -10,6 +10,7 @@ const FilterConfigModal = ({
                            }) => {
     const formRef = useRef(null);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("parameters");
     useEffect(() => {
         console.log("FilterConfigModal: ", filter);
     });
@@ -74,34 +75,53 @@ const FilterConfigModal = ({
                 <Modal.Title>Configure <b>{filter.description}</b></Modal.Title>
             </Modal.Header>
             <Modal.Body>
+                <Nav fill variant="tabs" activeKey={activeTab} onSelect={(selectedKey) => setActiveTab(selectedKey)}>
+                    <Nav.Item>
+                        <Nav.Link eventKey="parameters">Main parameters</Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                        <Nav.Link eventKey="bounds">Model bounds</Nav.Link>
+                    </Nav.Item>
+                </Nav>
                 <Container>
                     <Form ref={formRef}>
-                        {filter.parameters.filter((parameter) => parameter.parameter_type !== "ptNull")
-                            .map((parameter, index) => (
-                                <Container key={index} className="flex-column">
-                                    <Row style={{paddingTop: "10px"}}>
-                                        <Col xs={6} md={6}>
-                                            <p>{parameter.ui_parameter_name}</p>
-                                            <p className="small text-muted">{parameter.ui_parameter_tooltip ? (parameter.ui_parameter_tooltip) : ("")}</p>
-                                        </Col>
-                                        <Col lg={6} md={6}>
-                                            <ParameterInput parameter={parameter}
-                                                            signals={signals}
-                                                            models={models}
-                                                            solvers={solvers}
-                                                            selectedModel={selectedModel}
-                                                            setSelectedModel={setSelectedModel}
-                                                            setFilter={setFilter}
-                                                            filter={filter}
-                                            />
-                                            <Form.Text id={parameter.ui_parameter_name} muted>
-                                                {parameter.parameter_type}
-                                            </Form.Text>
-                                        </Col>
-                                        <hr/>
-                                    </Row>
-                                </Container>
-                            ))}
+                        {activeTab === "parameters" && (
+                            filter.parameters.filter((parameter) => parameter.parameter_type !== "ptDouble_Array")
+                                .map((parameter, index) => (
+                                    <Container key={index} className="flex-column">
+                                        <Row style={{paddingTop: "10px"}}>
+                                            <Col xs={6} md={6}>
+                                                {parameter.parameter_type === "ptNull" ?
+                                                    <p><b>{parameter.ui_parameter_name}</b></p>
+                                                    : <p>{parameter.ui_parameter_name}</p>
+                                                }
+
+                                                {/* TO BE REMOVED WHEN RELEASED */}
+                                                <p className="small text-muted">{parameter.ui_parameter_tooltip ? parameter.ui_parameter_tooltip : ""}</p>
+                                            </Col>
+                                            <Col lg={6} md={6}>
+                                                <ParameterInput
+                                                    parameter={parameter}
+                                                    signals={signals}
+                                                    models={models}
+                                                    solvers={solvers}
+                                                    selectedModel={selectedModel}
+                                                    setSelectedModel={setSelectedModel}
+                                                    setFilter={setFilter}
+                                                    filter={filter}
+                                                />
+                                                <Form.Text id={parameter.ui_parameter_name} muted>
+                                                    {parameter.parameter_type}
+                                                </Form.Text>
+                                            </Col>
+                                            <hr/>
+                                        </Row>
+                                    </Container>
+                                ))
+                        )}
+                        {activeTab === "bounds" && (
+                            <p>Model bounds will be implemented here.</p>
+                        )}
                     </Form>
                 </Container>
             </Modal.Body>

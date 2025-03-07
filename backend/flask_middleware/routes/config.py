@@ -12,6 +12,8 @@ def save_configuration():
 
     result = save_configuration_service(config_path)
 
+    # print(result)
+
     if result == "0" and os.path.exists(config_path):
         return send_file(config_path, as_attachment=True)
     else:
