@@ -10,14 +10,6 @@ def solvers_info_to_dict(solver):
         "specialized_models": [str(p) for p in solver.specialized_models],
     }
 
-# struct SolverInfo {
-#     std::string id;
-#     std::string description;
-#     bool specialized;
-#     size_t specialized_count;
-#     std::vector<std::string> specialized_models;
-# };
-
 def get_available_solvers():
     solvers = list(scgms_wrapper.get_available_solvers())
     solvers_dict = [solvers_info_to_dict(s) for s in solvers]

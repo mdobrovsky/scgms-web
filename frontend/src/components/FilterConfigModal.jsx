@@ -3,26 +3,55 @@ import ParameterInput from "./ParameterInput";
 import PropTypes from "prop-types";
 import {useRef, useEffect, useState} from "react";
 import {configureFilter} from "../services/filterService";
+import ModelBoundsEditableTable from "./ModelBoundsEditableTable.jsx";
+import { ToastContainer, toast } from 'react-toastify';
 
 const FilterConfigModal = ({
-                               filter, setFilter, show, onClose, signals, models,
+                               filter, setFilter, show, onClose, signals, models, metrics,
                                solvers, selectedModel, setSelectedModel, setSelectedFilters
                            }) => {
     const formRef = useRef(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("parameters");
+    const [disableModelBoundsNav, setDisableModelBoundsNav] = useState(true);
     useEffect(() => {
-        console.log("FilterConfigModal: ", filter);
-    });
+        if (selectedModel) {
+            setDisableModelBoundsNav(false);
+        } else {
+            setDisableModelBoundsNav(true);
+            setActiveTab("parameters");
+        }
+    }, [selectedModel]);
 
 
     if (!filter) return null;
 
-    const handleSaveChanges = async () => {
-        if (!formRef.current) return;
+    const handleBoundsChange = (serializedBounds) => {
+        const updatedParameters = filter.parameters.map((p) => {
+            if (p.config_parameter_name === "Model_Bounds" && p.parameter_type === "ptDouble_Array") {
+                return {
+                    ...p,
+                    value: serializedBounds.boundsString
+                };
+            }
+            return p;
+        });
 
+        setFilter((prevFilter) => ({
+            ...prevFilter,
+            parameters: updatedParameters
+        }));
+
+    };
+
+
+    const handleSaveChanges = async () => {
+        const formData = Object.fromEntries(new FormData(formRef.current).entries());
+
+        if (!formData) return;
         const newParameters = filter.parameters.map((param) => {
-            const element = formRef.current.elements[param.config_parameter_name];
+            const element = formData[param.config_parameter_name];
+            // console.log("form data: ", formData);
 
             let value;
             if (!element) {
@@ -31,17 +60,23 @@ const FilterConfigModal = ({
 
             switch (param.parameter_type) {
                 case "ptBool":
-                    value = element.checked ? "true" : "false";
+                    value = element ? "true" : "false";
                     break;
                 case "ptSignal_Id":
                 case "ptSignal_Model_Id":
                 case "ptDiscrete_Model_Id":
                 case "ptSolver_Id":
                 case "ptModel_Produced_Signal_Id":
-                    value = element.value || "";
+                    value = element || "";
                     break;
+                case "ptRatTime": {
+                    const days = Number(formData["days"]) || 0;
+                    const [hours, minutes, seconds] = element.split(":").map(Number);
+                    value = (days * 24 + hours + minutes / 60 + seconds / 3600) + "";
+                    break;
+                }
                 default:
-                    value = element.value;
+                    value = element;
                     break;
             }
 
@@ -55,16 +90,35 @@ const FilterConfigModal = ({
         );
 
         setFilter(updatedFilter);
-        setLoading(true);
-        await configureFilter(updatedFilter).then((result) => {
-            if (result === "0") {
-                console.log("Filter configured successfully!");
-            } else {
-                console.error("Error configuring filter:", result);
-            }
-        });
-        setLoading(false);
 
+        await toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const result = await configureFilter(updatedFilter);
+                    if (result === "0") {
+                        resolve("Filter configured successfully!");
+                    } else {
+                        reject(new Error("Error configuring filter"));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            }),
+            {
+                pending: "Configuring filter...",
+                success: {
+                    render({ data }) {
+                        return data; // render success message
+                    },
+                    icon: "✅"
+                },
+                error: {
+                    render({ data }) {
+                        return `Error: ${data?.message || "Unknown error"}`;
+                    }
+                }
+            }
+        )
 
         onClose();
     };
@@ -80,7 +134,7 @@ const FilterConfigModal = ({
                         <Nav.Link eventKey="parameters">Main parameters</Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
-                        <Nav.Link eventKey="bounds">Model bounds</Nav.Link>
+                        <Nav.Link eventKey="bounds" disabled={disableModelBoundsNav}>Model bounds</Nav.Link>
                     </Nav.Item>
                 </Nav>
                 <Container>
@@ -105,6 +159,7 @@ const FilterConfigModal = ({
                                                     signals={signals}
                                                     models={models}
                                                     solvers={solvers}
+                                                    metrics={metrics}
                                                     selectedModel={selectedModel}
                                                     setSelectedModel={setSelectedModel}
                                                     setFilter={setFilter}
@@ -119,8 +174,14 @@ const FilterConfigModal = ({
                                     </Container>
                                 ))
                         )}
-                        {activeTab === "bounds" && (
-                            <p>Model bounds will be implemented here.</p>
+                        {activeTab === "bounds" && selectedModel && (
+                            <ModelBoundsEditableTable model={filter.model ?
+                                filter.model : selectedModel}
+                                                      values={filter.parameters.find((parameter) =>
+                                                          parameter.parameter_type === "ptDouble_Array" &&
+                                                          parameter.config_parameter_name === "Model_Bounds"
+                                                      )?.value || ""}
+                                                      onBoundsChange={handleBoundsChange}/>
                         )}
                     </Form>
                 </Container>
@@ -148,6 +209,11 @@ FilterConfigModal.propTypes = {
                 value: PropTypes.any,
             })
         ).isRequired,
+        model: PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+            flags: PropTypes.string.isRequired,
+        })
     }).isRequired,
     show: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,

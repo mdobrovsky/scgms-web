@@ -31,6 +31,11 @@ def get_available_filters():
 def add_filter_service(guid_string):
     return scgms_wrapper.add_filter(guid_string)
 
+def move_up_service(index):
+    return scgms_wrapper.move_filter_up(index)
+
+def move_down_service(index):
+    return scgms_wrapper.move_filter_down(index)
 
 def remove_filter_service(index):
     return scgms_wrapper.remove_filter(index)
@@ -39,7 +44,7 @@ def remove_filter_service(index):
 def configure_filter_service(filter, parameters):
     print("Configuring filter: ", filter)
     for p in parameters:
-        res = scgms_wrapper.configure_filter(filter["id"], p["parameter_type"],
+        res = scgms_wrapper.configure_filter(filter["index"] ,filter["id"], p["parameter_type"],
                                        p["config_parameter_name"],
                                        p["value"])
         if res != "0":

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 
@@ -9,24 +10,24 @@
 #include <pybind11/stl_bind.h>
 
 
-#include "../../scgms-release/common/scgms/rtl/scgmsLib.h"
-#include "../../scgms-release/common/scgms/rtl/AlignmentAllocator.h"
-#include "../../scgms-release/common/scgms/rtl/ApproxLib.h"
-#include "../../scgms-release/common/scgms/rtl/Common_Calculated_Signal.h"
-#include "../../scgms-release/common/scgms/rtl/DbLib.h"
-#include "../../scgms-release/common/scgms/rtl/DeviceLib.h"
-#include "../../scgms-release/common/scgms/rtl/Dynamic_Library.h"
-#include "../../scgms-release/common/scgms/rtl/FilesystemLib.h"
-#include "../../scgms-release/common/scgms/rtl/FilterLib.h"
-#include "../../scgms-release/common/scgms/rtl/guid.h"
-#include "../../scgms-release/common/scgms/rtl/hresult.h"
-#include "../../scgms-release/common/scgms/rtl/manufactory.h"
-#include "../../scgms-release/common/scgms/rtl/ModelsLib.h"
-#include "../../scgms-release/common/scgms/rtl/rattime.h"
-#include "../../scgms-release/common/scgms/rtl/referencedImpl.h"
-#include "../../scgms-release/common/scgms/rtl/SolverLib.h"
-#include "../../scgms-release/common/scgms/rtl/UILib.h"
-#include "../../scgms-release/common/scgms/utils/string_utils.h"
+#include "../scgms-release/common/scgms/rtl/scgmsLib.h"
+#include "../scgms-release/common/scgms/rtl/AlignmentAllocator.h"
+#include "../scgms-release/common/scgms/rtl/ApproxLib.h"
+#include "../scgms-release/common/scgms/rtl/Common_Calculated_Signal.h"
+#include "../scgms-release/common/scgms/rtl/DbLib.h"
+#include "../scgms-release/common/scgms/rtl/DeviceLib.h"
+#include "../scgms-release/common/scgms/rtl/Dynamic_Library.h"
+#include "../scgms-release/common/scgms/rtl/FilesystemLib.h"
+#include "../scgms-release/common/scgms/rtl/FilterLib.h"
+#include "../scgms-release/common/scgms/rtl/guid.h"
+#include "../scgms-release/common/scgms/rtl/hresult.h"
+#include "../scgms-release/common/scgms/rtl/manufactory.h"
+#include "../scgms-release/common/scgms/rtl/ModelsLib.h"
+#include "../scgms-release/common/scgms/rtl/rattime.h"
+#include "../scgms-release/common/scgms/rtl/referencedImpl.h"
+#include "../scgms-release/common/scgms/rtl/SolverLib.h"
+#include "../scgms-release/common/scgms/rtl/UILib.h"
+#include "../scgms-release/common/scgms/utils/string_utils.h"
 
 
 solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so that we can cancel from sigint
@@ -175,7 +176,8 @@ std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
 
 std::string add_filter(const std::string &guid_string) {
     bool ok;
-    chain_configuration.Add_Link(WString_To_GUID(Widen_String(guid_string), ok));
+    scgms::SFilter_Configuration_Link link = chain_configuration.Add_Link
+            (WString_To_GUID(Widen_String(guid_string), ok));
     return ok ? "0" : "1";
 }
 
@@ -183,23 +185,12 @@ std::string save_configuration(std::string &path) {
     refcnt::Swstr_list errors;
 
     HRESULT res = chain_configuration->Save_To_File(Widen_String(path).c_str(), errors.get());
+    errors.for_each([](const std::wstring &str) {
+        std::wcerr << str << std::endl;
+    });
 
     return Succeeded(res) ? "0" : "1";
-
-
 }
-
-// std::pair<std::string, std::vector<std::wstring>> save_configuration(const std::string &path) {
-//     refcnt::Swstr_list errors;
-//     HRESULT res = chain_configuration->Save_To_File(Widen_String(path).c_str(), errors.get());
-//
-//     std::vector<std::wstring> error_list;
-//     errors.for_each([&error_list](const std::wstring &str) {
-//         error_list.push_back(str);
-//     });
-//
-//     return {Succeeded(res) ? "0" : "1", error_list};
-// }
 
 
 std::string remove_filter(int index) {
@@ -224,7 +215,6 @@ std::string get_parameter_default_value(const scgms::NParameter_Type type) {
         case scgms::NParameter_Type::ptDouble:
             return "0.0";
         case scgms::NParameter_Type::ptRatTime:
-            return "00:00:00";
         case scgms::NParameter_Type::ptInt64:
             return "0";
         case scgms::NParameter_Type::ptBool:
@@ -248,93 +238,45 @@ std::string get_parameter_default_value(const scgms::NParameter_Type type) {
     return "";
 }
 
-// std::string configure_filter(
-//     const std::string &id,
-//     const std::string &parameter_type_string,
-//     const std::string &config_parameter_name,
-//     const std::string &value
-// ) {
-//     bool ok;
-//     scgms::SFilter_Configuration_Link link = chain_configuration.Add_Link(WString_To_GUID(Widen_String(id), ok));
-//     if (!link) {
-//         return "1";
-//     }
-//     const scgms::NParameter_Type parameter_type = StringToParameterType(parameter_type_string);
-//     if (parameter_type == scgms::NParameter_Type::ptNull) {
-//         return "0";
-//     }
-//     const wchar_t *config_parameter_name_wchar = Widen_String(config_parameter_name).c_str();
-//     scgms::SFilter_Parameter parameter = link.Resolve_Parameter(config_parameter_name_wchar);
-//
-//     if (!parameter) {
-//         parameter = link.Add_Parameter(parameter_type, config_parameter_name_wchar);
-//         if (!parameter) {
-//             return "1";
-//         }
-//     }
-//     HRESULT res = E_FAIL;
-//     GUID guid;
-//
-//     switch (parameter_type) {
-//         case scgms::NParameter_Type::ptWChar_Array:
-//             res = parameter.set_wstring(Widen_String(value));
-//             break;
-//         case scgms::NParameter_Type::ptInt64_Array:
-//             // TODO NEVIM
-//             break;
-//         case scgms::NParameter_Type::ptDouble:
-//             res = parameter->Set_Double(std::stod(value));
-//             break;
-//         case scgms::NParameter_Type::ptRatTime:
-//             // TODO NEVIM
-//             break;
-//         case scgms::NParameter_Type::ptInt64:
-//             res = parameter->Set_Int64(std::stoll(value));
-//             break;
-//         case scgms::NParameter_Type::ptBool:
-//             res = parameter->Set_Bool(value == "true");
-//             break;
-//         case scgms::NParameter_Type::ptSignal_Model_Id:
-//         case scgms::NParameter_Type::ptDiscrete_Model_Id:
-//         case scgms::NParameter_Type::ptMetric_Id:
-//         case scgms::NParameter_Type::ptSolver_Id:
-//         case scgms::NParameter_Type::ptModel_Produced_Signal_Id:
-//         case scgms::NParameter_Type::ptSignal_Id:
-//             ok = false;
-//             guid = WString_To_GUID(Widen_String(value), ok);
-//             if (!ok) {
-//                 return "1";
-//             }
-//             res = parameter->Set_GUID(&guid);
-//
-//             break;
-//         case scgms::NParameter_Type::ptDouble_Array:
-//             // TODO NEVIM
-//             break;
-//         case scgms::NParameter_Type::ptSubject_Id:
-//             // TODO NEVIM
-//             break;
-//         case scgms::NParameter_Type::ptInvalid:
-//             // TODO NEVIM
-//             break;
-//         default:
-//             break;
-//     }
-//     if (!Succeeded(res)) {
-//         std::wcerr << L"Failed to set parameter value." << std::endl;
-//         return "1";
-//     }
-//     return "0";
-// }
+std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::stringstream ss(str);
+    std::string token;
+
+    while (std::getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
+
+std::vector<double> split_double_array(const std::string &value) {
+    std::vector<double> double_array;
+    std::vector<std::string> tokens = split(value, ' ');
+    for (const std::string &token : tokens) {
+        double_array.push_back(std::stod(token));
+    }
+    return double_array;
+}
+
 
 std::string configure_filter(
+    const std::string &index,
     const std::string &id,
     const std::string &parameter_type_string,
     const std::string &config_parameter_name,
     const std::string &value
 ) {
     bool ok;
-    scgms::SFilter_Configuration_Link link = chain_configuration.Add_Link(WString_To_GUID(Widen_String(id), ok));
+    scgms::SFilter_Configuration_Link link;
+    size_t target_index = std::stoi(index);
+    size_t current_index = 0;
+    chain_configuration.for_each([&](scgms::SFilter_Configuration_Link chain_link) {
+        if (current_index == target_index) {
+            link = std::move(chain_link);
+        }
+        current_index++;
+    });
     if (!link) {
         std::cerr << "Failed to add link for filter ID: " << id << std::endl;
         return "1";
@@ -344,7 +286,9 @@ std::string configure_filter(
         std::cerr << "Invalid parameter type: " << parameter_type_string << std::endl;
         return "0";
     }
-    const wchar_t *config_parameter_name_wchar = Widen_String(config_parameter_name).c_str();
+    std::wstring config_parameter_name_wstring = Widen_String(config_parameter_name);
+    const wchar_t *config_parameter_name_wchar = config_parameter_name_wstring.c_str();
+
     scgms::SFilter_Parameter parameter = link.Resolve_Parameter(config_parameter_name_wchar);
 
     if (!parameter) {
@@ -358,7 +302,9 @@ std::string configure_filter(
     GUID guid;
 
     switch (parameter_type) {
+        case scgms::NParameter_Type::ptRatTime:
         case scgms::NParameter_Type::ptWChar_Array:
+            std::cout << "Setting wstring: " << value << std::endl;
             res = parameter.set_wstring(Widen_String(value));
             break;
         case scgms::NParameter_Type::ptInt64_Array: // NERESIT
@@ -366,9 +312,6 @@ std::string configure_filter(
             break;
         case scgms::NParameter_Type::ptDouble:
             res = parameter->Set_Double(std::stod(value));
-            break;
-        case scgms::NParameter_Type::ptRatTime:
-            // TODO NEVIM
             break;
         case scgms::NParameter_Type::ptInt64:
             res = parameter->Set_Int64(std::stoll(value));
@@ -391,7 +334,7 @@ std::string configure_filter(
             res = parameter->Set_GUID(&guid);
             break;
         case scgms::NParameter_Type::ptDouble_Array:
-            // TODO NEVIM
+            res = parameter.set_double_array(split_double_array(value));
             break;
         case scgms::NParameter_Type::ptSubject_Id: // NERESIT
             // TODO NEVIM
@@ -407,9 +350,22 @@ std::string configure_filter(
         return "1";
     }
 
-    std::cout << "Successfully configured parameter: " << config_parameter_name << " with value: " << value << std::endl;
+    std::cout << "Successfully configured parameter: " << config_parameter_name << " with value: " << value <<
+            std::endl;
     return "0";
 }
+
+std::string move_filter_up(int index) {
+    HRESULT res = chain_configuration->move(index, index - 1);
+    return Succeeded(res) ? "0" : "1";
+}
+
+std::string move_filter_down(int index) {
+    HRESULT res = chain_configuration->move(index, index + 1);
+    return Succeeded(res) ? "0" : "1";
+}
+
+
 
 SignalInfo convert_signal_descriptor(const scgms::TSignal_Descriptor &desc) {
     return SignalInfo{
@@ -508,9 +464,7 @@ std::vector<SolverInfo> get_available_solvers() {
 }
 
 std::vector<MetricInfo> get_available_metrics() {
-    std::vector<scgms::TMetric_Descriptor> metric_desc = scgms::get_metric_descriptor_list();
-
-
+    std::vector metric_desc = scgms::get_metric_descriptor_list();
     std::vector<MetricInfo> metrics;
     for (const scgms::TMetric_Descriptor &desc: metric_desc) {
         MetricInfo metric = convert_metric_descriptor(desc);
@@ -529,9 +483,6 @@ std::vector<FilterInfo> get_available_filters() {
     // Iterate through all filters
     for (size_t i = 0; i < filter_list.size(); ++i) {
         const scgms::TFilter_Descriptor &filter = filter_list[i];
-        // if (i == 9) {
-        //     create_parameters(filter);
-        // }
         FilterInfo info;
         info.id = Narrow_WString(GUID_To_WString(filter.id));
         info.flags = static_cast<int>(filter.flags);
@@ -554,8 +505,6 @@ std::vector<FilterInfo> get_available_filters() {
         }
         filters.push_back(info);
     }
-    // std::string path = std::string("./my_config.ini");
-    // std::cout << "SAVED: " << save_configuration(path) << std::endl;
 
     return filters;
 }
@@ -652,6 +601,8 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("save_configuration", &save_configuration, "Saves the configuration to a file");
     m.def("configure_filter", &configure_filter, "Configures a filter in the configuration");
     m.def("remove_filter", &remove_filter, "Removes a filter from the configuration");
+    m.def("move_filter_up", &move_filter_up, "Moves a filter up in the configuration");
+    m.def("move_filter_down", &move_filter_down, "Moves a filter down in the configuration");
     // Expose structures for working with filters
     namespace py = pybind11;
     py::class_<FilterParameter>(m, "FilterParameter")
@@ -716,19 +667,22 @@ PYBIND11_MODULE(scgms_wrapper, m) {
             .def_readonly("specialized_models", &SolverInfo::specialized_models);
     py::bind_vector<std::vector<SolverInfo> >(m, "SolverInfoVector");
     m.def("get_available_solvers", &get_available_solvers, "Returns available solvers");
+
+    // Binding for MetricInfo
+    py::class_<MetricInfo>(m, "MetricInfo")
+            .def_readonly("id", &MetricInfo::id)
+            .def_readonly("description", &MetricInfo::description);
+    py::bind_vector<std::vector<MetricInfo> >(m, "MetricInfoVector");
+    m.def("get_available_metrics", &get_available_metrics, "Returns available metrics");
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    load_scgms_lib();
-    std::vector<MetricInfo> metrics = get_available_metrics();
-    for (const MetricInfo &metric: metrics) {
-        std::cout << "Metric ID: " << metric.id << std::endl;
-        std::cout << "Description: " << metric.description << std::endl;
-        std::cout << std::endl;
-    }
-
-
+    // chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    // std::cout << add_filter("{C0E942B9-3928-4B81-9B43-A347668200BA}");
+    // configure_filter("0","{C0E942B9-3928-4B81-9B43-A347668200BA}",
+    //     "ptBool", "Log_Segments_Individually", "true");
+    // chain_configuration->Save_To_File(L"test_config.ini", nullptr);
     return 0;
 }
 #endif

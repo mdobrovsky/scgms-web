@@ -1,12 +1,14 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import {StrictMode} from 'react'
+import {createRoot} from 'react-dom/client'
 // import './index.css'
 import FiltersPage from "./pages/FiltersPage.jsx";
 import "bootstrap/dist/css/bootstrap.min.css";
+import {ToastContainer} from "react-toastify";
 
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <FiltersPage />
-  </StrictMode>,
+    <StrictMode>
+        <ToastContainer position="top-center" theme="light" autoClose={3000}/>
+        <FiltersPage/>
+    </StrictMode>,
 )

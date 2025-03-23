@@ -1,8 +1,27 @@
 import {Form} from "react-bootstrap";
 import PropTypes from "prop-types";
+import {useEffect} from "react";
+import convertDoubleToTime from "../services/utils";
+import TimeWithDaysInput from "./TimeWithDaysInput.jsx";
 
 
-const ParameterInput = ({parameter, signals, models, solvers, selectedModel, setSelectedModel, setFilter, filter}) => {
+const ParameterInput = ({
+                            parameter, signals, models, solvers, metrics,
+                            selectedModel, setSelectedModel, setFilter, filter
+                        }) => {
+
+        const selectedModelId = filter.parameters.find((p) =>
+            p.parameter_type === "ptDiscrete_Model_Id" || p.parameter_type === "ptSignal_Model_Id"
+        )?.value;
+
+
+
+        useEffect(() => {
+            if (selectedModelId) {
+                const model = models.find((model) => model.id === selectedModelId);
+                setSelectedModel(model);
+            }
+        }, [selectedModelId, models, setSelectedModel]);
 
         switch (parameter.parameter_type) {
             case "ptBool":
@@ -20,9 +39,21 @@ const ParameterInput = ({parameter, signals, models, solvers, selectedModel, set
                                        }));
                                    }}/>;
 
-            case "ptRatTime":
-                return <Form.Control id={parameter.config_parameter_name} type="time" step={1}
-                                     name={parameter.config_parameter_name} defaultValue={parameter.value}/>;
+            case "ptRatTime": {
+                const [days, time] = convertDoubleToTime(parameter.value);
+                // console.log("Days:", days, "Time:", time);
+                // return <>
+                //     <Form.Control id="days" type="number" min="0" name="days"
+                //                   placeholder="Days" defaultValue={days === 0 ? "" : days}/>
+                //     <Form.Control id={parameter.config_parameter_name} type="time" step={1}
+                //                   name={parameter.config_parameter_name}
+                //                   defaultValue={time}/>
+                // </>
+                return <TimeWithDaysInput onChange={null} value={parameter.value} step={1}
+                                            id={parameter.config_parameter_name} name={parameter.config_parameter_name}
+                />
+            }
+
             case "ptInt64":
             case "ptDouble":
                 return <Form.Control id={parameter.config_parameter_name} type="number"
@@ -33,7 +64,18 @@ const ParameterInput = ({parameter, signals, models, solvers, selectedModel, set
             case "ptSignal_Id":
                 return (
                     <Form.Select id={parameter.config_parameter_name} name={parameter.config_parameter_name}
-                                 value={parameter.value}>
+                                 value={parameter.value}
+                                 onChange={(e) => {
+                                     setFilter((prevFilter) => ({
+                                         ...prevFilter,
+                                         parameters: prevFilter.parameters.map((p) =>
+                                             p.config_parameter_name === parameter.config_parameter_name
+                                                 ? {...p, value: e.target.value}
+                                                 : p
+                                         ),
+                                     }));
+                                 }}
+                    >
                         <option value="">Select a signal...</option>
                         {signals.map((signal) => (
                             <option key={signal.id} value={signal.id}>
@@ -124,12 +166,38 @@ const ParameterInput = ({parameter, signals, models, solvers, selectedModel, set
                         ))}
                     </Form.Select>
                 );
+            case "ptMetric_Id": {
+                return (
+                    <Form.Select
+                        id={parameter.config_parameter_name}
+                        name={parameter.config_parameter_name}
+                        value={parameter.value || ""}
+                        onChange={(e) => {
+                            setFilter((prevFilter) => ({
+                                ...prevFilter,
+                                parameters: prevFilter.parameters.map((p) =>
+                                    p.config_parameter_name === parameter.config_parameter_name
+                                        ? {...p, value: e.target.value}
+                                        : p
+                                ),
+                            }));
+                        }}
+                    >
+                        <option value="">Select a metric...</option>
+                        {metrics.map((metric) => (
+                            <option key={metric.id} value={metric.id}>
+                                {metric.description}
+                            </option>
+                        ))}
+                    </Form.Select>
+                );
+            }
             case "ptModel_Produced_Signal_Id": {
-                const selectedModelId = filter.parameters.find((p) =>
-                    p.parameter_type === "ptDiscrete_Model_Id" || p.parameter_type === "ptSignal_Model_Id")?.value;
-                if (selectedModelId !== "") {
-                    setSelectedModel(models.find((model) => model.id === selectedModelId));
-                }
+                // const selectedModelId = filter.parameters.find((p) =>
+                //     p.parameter_type === "ptDiscrete_Model_Id" || p.parameter_type === "ptSignal_Model_Id")?.value;
+                // if (selectedModelId !== "") {
+                //     setSelectedModel(models.find((model) => model.id === selectedModelId));
+                // }
 
                 {
                     if (!selectedModel) {
@@ -194,6 +262,12 @@ ParameterInput.propTypes = {
         })
     ).isRequired,
     solvers: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+    metrics: PropTypes.arrayOf(
         PropTypes.shape({
             id: PropTypes.string.isRequired,
             description: PropTypes.string.isRequired,

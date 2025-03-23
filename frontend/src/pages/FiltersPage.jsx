@@ -9,6 +9,7 @@ import {fetchModels} from "../services/modelService.jsx";
 import {fetchSolvers} from "../services/solverService.jsx";
 import {saveConfiguration} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
+import {fetchMetrics} from "../services/metricService.jsx";
 
 function FiltersPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
@@ -17,6 +18,7 @@ function FiltersPage() {
     const [signals, setSignals] = useState([]);
     const [models, setModels] = useState([]);
     const [solvers, setSolvers] = useState([]);
+    const [metrics, setMetrics] = useState([]);
     const [selectedFilter, setSelectedFilter] = useState(null);
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
@@ -44,14 +46,23 @@ function FiltersPage() {
             setSolvers(data);
         });
 
+        fetchMetrics().then(data => {
+            console.log("Fetched Metrics:", data);
+            setMetrics(data);
+        });
+
     }, []);
 
 
     const handleAddFilter = async (filter) => {
         const result = await addFilter(filter.id);
         if (result === "0") {
-            setSelectedFilters([...selectedFilters, filter]);
+            // setSelectedFilters([...selectedFilters, filter]);
+            setSelectedFilters([...selectedFilters, {...filter, index: selectedFilters.length.toString()}]);
+
         }
+        console.log("Selected Filters:", selectedFilters);
+        // add index atribute to filter object
     }
 
     const handleCloseConfigModal = () => {
@@ -101,6 +112,7 @@ function FiltersPage() {
                         <SelectedFilterList
                             filters={selectedFilters}
                             onFilterSelect={setSelectedFilter}
+                            setSelectedFilters={setSelectedFilters}
                             handleConfigureFilter={handleConfigureFilter}
                             handleRemoveFilter={handleRemoveFilter}
                             handleRemoveAllFilters={handleRemoveAllFilters}
@@ -113,17 +125,20 @@ function FiltersPage() {
                 </Row>
             </Container>
 
-            <FilterConfigModal filter={selectedFilter} show={showConfigModal}
-                               onClose={handleCloseConfigModal}
-                               signals={signals}
-                               models={models}
-                               solvers={solvers}
-                               selectedModel={selectedModel}
-                               setSelectedModel={setSelectedModel}
-                               setFilter={setSelectedFilter}
-                               setSelectedFilters={setSelectedFilters}
+            {selectedFilter && (
+                <FilterConfigModal filter={selectedFilter} show={showConfigModal}
+                                   onClose={handleCloseConfigModal}
+                                   signals={signals}
+                                   models={models}
+                                   solvers={solvers}
+                                   metrics={metrics}
+                                   selectedModel={selectedModel}
+                                   setSelectedModel={setSelectedModel}
+                                   setFilter={setSelectedFilter}
+                                   setSelectedFilters={setSelectedFilters}
 
-            />
+                />
+            )}
             <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}
                              fileName={fileName}
                              setFileName={setFileName}

@@ -14,7 +14,7 @@ def models_info_to_dict(model):
         "parameter_db_column_names": [str(p) for p in model.parameter_db_column_names],
         "lower_bound": model.lower_bound,
         "default_values": [str(p) for p in model.default_values],
-        "upper_bound": [str(p) for p in model.upper_bound],
+        "upper_bound": model.upper_bound,
         "number_of_calculated_signals": model.number_of_calculated_signals,
         "calculated_signal_ids": [str(p) for p in model.calculated_signal_ids],
         "reference_signal_ids": [str(p) for p in model.reference_signal_ids],

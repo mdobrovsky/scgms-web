@@ -1,5 +1,5 @@
 import axios from "axios";
-import {SAVE_CONFIGURATION_URL} from "../apiConstants.jsx";
+import {SAVE_CONFIGURATION_URL} from "../constants/apiConstants.jsx";
 
 export const saveConfiguration = async (configFileName) => {
     try {

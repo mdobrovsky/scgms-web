@@ -1,5 +1,5 @@
 import React from "react";
-import {Modal, Button, Container, Form} from "react-bootstrap";
+import {Modal, Button, Container, Form, InputGroup} from "react-bootstrap";
 
 const SaveConfigModal = ({show, onClose, onSave, fileName, setFileName, fileNameError, setFileNameError}) => {
     const validateFileName = (name) => {
@@ -28,12 +28,15 @@ const SaveConfigModal = ({show, onClose, onSave, fileName, setFileName, fileName
                 <Container>
                     <Form.Group>
                         <Form.Label>Configuration File Name</Form.Label>
-                        <Form.Control
-                            type="text"
-                            value={fileName}
-                            onChange={handleFileNameChange}
-                            isInvalid={!!fileNameError}
-                        />
+                        <InputGroup>
+                            <Form.Control
+                                type="text"
+                                value={fileName}
+                                onChange={handleFileNameChange}
+                                isInvalid={!!fileNameError}
+                            />
+                            <InputGroup.Text>.ini</InputGroup.Text>
+                        </InputGroup>
                         <Form.Control.Feedback type="invalid">{fileNameError}</Form.Control.Feedback>
                         <Form.Text muted>
                             Enter the name of the configuration file (without extension). Avoid special
