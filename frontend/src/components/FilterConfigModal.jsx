@@ -4,8 +4,9 @@ import PropTypes from "prop-types";
 import {useRef, useEffect, useState} from "react";
 import {configureFilter} from "../services/filterService";
 import ModelBoundsEditableTable from "./ModelBoundsEditableTable.jsx";
-import { ToastContainer, toast } from 'react-toastify';
-
+import {ToastContainer, toast} from 'react-toastify';
+import convertDoubleToTimeParts from "../services/utils.jsx";
+const pad = (num) => String(num).padStart(2, "0");
 const FilterConfigModal = ({
                                filter, setFilter, show, onClose, signals, models, metrics,
                                solvers, selectedModel, setSelectedModel, setSelectedFilters
@@ -47,6 +48,7 @@ const FilterConfigModal = ({
 
     const handleSaveChanges = async () => {
         const formData = Object.fromEntries(new FormData(formRef.current).entries());
+        console.log("Form data:", formData);
 
         if (!formData) return;
         const newParameters = filter.parameters.map((param) => {
@@ -70,9 +72,11 @@ const FilterConfigModal = ({
                     value = element || "";
                     break;
                 case "ptRatTime": {
-                    const days = Number(formData["days"]) || 0;
-                    const [hours, minutes, seconds] = element.split(":").map(Number);
-                    value = (days * 24 + hours + minutes / 60 + seconds / 3600) + "";
+                    const [h, m ,s] = element.split(":").map(Number);
+                    console.log("Hours:", h, "Minutes:", m, "Seconds:", s);
+                    const days = Number(formData[`${param.config_parameter_name}-days`]) || 0;
+                    value = (days + h / 24 + m / 1440 + s / 86400).toString();
+                    console.log("Value:", value.toString());
                     break;
                 }
                 default:
@@ -91,6 +95,8 @@ const FilterConfigModal = ({
 
         setFilter(updatedFilter);
 
+        console.log("Updated filter:", updatedFilter);
+
         await toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
@@ -107,13 +113,13 @@ const FilterConfigModal = ({
             {
                 pending: "Configuring filter...",
                 success: {
-                    render({ data }) {
+                    render({data}) {
                         return data; // render success message
                     },
                     icon: "✅"
                 },
                 error: {
-                    render({ data }) {
+                    render({data}) {
                         return `Error: ${data?.message || "Unknown error"}`;
                     }
                 }

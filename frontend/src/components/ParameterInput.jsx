@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import {useEffect} from "react";
 import convertDoubleToTime from "../services/utils";
 import TimeWithDaysInput from "./TimeWithDaysInput.jsx";
-
+const pad = (num) => String(num).padStart(2, "0");
 
 const ParameterInput = ({
                             parameter, signals, models, solvers, metrics,
@@ -39,15 +39,20 @@ const ParameterInput = ({
                                        }));
                                    }}/>;
 
-            case "ptRatTime": {
-                const [days, time] = convertDoubleToTime(parameter.value);
+            case "ptRatTime": { // TODO neuklada to spravne cas
+
                 // console.log("Days:", days, "Time:", time);
+                // console.log("Parameter value:", parameter);
+                // const [daysStr, timeStr] = parameter.value.split(" ");
+                // const [hours, minutes, seconds] = timeStr.split(":").map((part) => pad(part));
+                // const formattedTime = `${hours}:${minutes}:${seconds}`;
+                // // const [hours, minutes, seconds] = time.split(":");
                 // return <>
                 //     <Form.Control id="days" type="number" min="0" name="days"
-                //                   placeholder="Days" defaultValue={days === 0 ? "" : days}/>
+                //                   placeholder="Days" defaultValue={daysStr}/>
                 //     <Form.Control id={parameter.config_parameter_name} type="time" step={1}
                 //                   name={parameter.config_parameter_name}
-                //                   defaultValue={time}/>
+                //                   defaultValue={formattedTime}/>
                 // </>
                 return <TimeWithDaysInput onChange={null} value={parameter.value} step={1}
                                             id={parameter.config_parameter_name} name={parameter.config_parameter_name}

@@ -1,10 +1,14 @@
-const convertDoubleToTime = (doubleValue) => {
-    const days = Math.floor(doubleValue / 24);
-    const hours = Math.floor(doubleValue % 24);
-    const minutes = Math.floor((doubleValue % 1) * 60);
-    const seconds = Math.floor((doubleValue % 1) * 60 % 1 * 60);
-    return [days,
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`];
-}
+const convertDoubleToTimeParts = (value) => {
+    const totalSeconds = Math.round(Number(value || 0) * 86400); // 1 den = 86400 sekund
 
-export default convertDoubleToTime;
+    const days = Math.floor(totalSeconds / 86400);
+    const remainder = totalSeconds % 86400;
+
+    const hours = Math.floor(remainder / 3600);
+    const minutes = Math.floor((remainder % 3600) / 60);
+    const seconds = remainder % 60;
+
+    return { days, hours, minutes, seconds };
+};
+
+export default convertDoubleToTimeParts;
