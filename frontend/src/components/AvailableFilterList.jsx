@@ -3,7 +3,8 @@ import PropTypes from "prop-types";
 
 const AvailableFilterList = ({filters, onFilterSelect}) => {
     return (
-        <Card className="p-3 mt-4">
+        <Card className="p-3 mt-4 h-100" style={{height: "550px"}}>
+
             <Card.Title as="h3">Available Filters</Card.Title>
             <ListGroup className="overflow-y-scroll" style={{height: "485px"}}>
                 {filters.length > 0 ? (

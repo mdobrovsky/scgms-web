@@ -3,8 +3,10 @@ import {Button, ButtonGroup, Card, ListGroup} from "react-bootstrap";
 import PropTypes from "prop-types";
 import {moveFilterDown, moveFilterUp} from "../services/filterService.jsx";
 
-const SelectedFilterList = ({filters, onFilterSelect, setSelectedFilters, handleConfigureFilter, handleRemoveFilter,
-                                handleRemoveAllFilters, handleSaveConfiguration}) => {
+const SelectedFilterList = ({
+                                filters, onFilterSelect, setSelectedFilters, handleConfigureFilter, handleRemoveFilter,
+                                handleRemoveAllFilters, handleSaveConfiguration
+                            }) => {
     const [selectedFilter, setSelectedFilter] = React.useState(null);
 
     const handleSelectFilter = (filter) => {
@@ -50,7 +52,8 @@ const SelectedFilterList = ({filters, onFilterSelect, setSelectedFilters, handle
         setSelectedFilter(null);
     }
     return (
-        <Card className="p-3 mt-4">
+        <Card className="p-3 mt-4 h-100" style={{height: "550px"}}>
+
             <Card.Title as="h3">Applied Filters</Card.Title>
             <ListGroup className="overflow-y-scroll" style={{height: "400px"}}>
                 {filters.length > 0 ? (

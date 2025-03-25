@@ -4,9 +4,8 @@ import PropTypes from "prop-types";
 import {useRef, useEffect, useState} from "react";
 import {configureFilter} from "../services/filterService";
 import ModelBoundsEditableTable from "./ModelBoundsEditableTable.jsx";
-import {ToastContainer, toast} from 'react-toastify';
-import convertDoubleToTimeParts from "../services/utils.jsx";
-const pad = (num) => String(num).padStart(2, "0");
+import {toast} from 'react-toastify';
+
 const FilterConfigModal = ({
                                filter, setFilter, show, onClose, signals, models, metrics,
                                solvers, selectedModel, setSelectedModel, setSelectedFilters
@@ -72,7 +71,7 @@ const FilterConfigModal = ({
                     value = element || "";
                     break;
                 case "ptRatTime": {
-                    const [h, m ,s] = element.split(":").map(Number);
+                    const [h, m, s] = element.split(":").map(Number);
                     console.log("Hours:", h, "Minutes:", m, "Seconds:", s);
                     const days = Number(formData[`${param.config_parameter_name}-days`]) || 0;
                     value = (days + h / 24 + m / 1440 + s / 86400).toString();
