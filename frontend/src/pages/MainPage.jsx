@@ -1,5 +1,5 @@
 import {useState, useEffect} from "react";
-import {Container, Row, Col} from "react-bootstrap";
+import {Container, Row, Col, Nav, Dropdown, Modal, Form} from "react-bootstrap";
 import AvailableFilterList from "../components/AvailableFilterList.jsx";
 import FilterConfigModal from "../components/FilterConfigModal";
 import SaveConfigModal from "../components/SaveConfigModal";
@@ -7,11 +7,12 @@ import {fetchFilters, addFilter, removeFilter} from "../services/filterService";
 import {fetchSignals} from "../services/signalService";
 import {fetchModels} from "../services/modelService.jsx";
 import {fetchSolvers} from "../services/solverService.jsx";
-import {saveConfiguration} from "../services/configService.jsx";
+import {saveConfiguration, loadConfiguration} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
+import LoadConfigModal from "../components/LoadConfigModal.jsx";
 
-function FiltersPage() {
+function MainPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
     const [selectedFilters, setSelectedFilters] = useState([]);
     const [selectedModel, setSelectedModel] = useState(null);
@@ -22,8 +23,12 @@ function FiltersPage() {
     const [selectedFilter, setSelectedFilter] = useState(null);
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
+    const [showLoadModal, setShowLoadModal] = useState(false);
     const [fileName, setFileName] = useState("");
     const [fileNameError, setFileNameError] = useState("");
+    const [activeTab, setActiveTab] = useState("configuration");
+    const [file, setFile] = useState(null);
+    const disableModelBoundsNav = selectedFilters.length === 0;
 
     useEffect(() => {
         fetchFilters().then(data => {
@@ -100,30 +105,50 @@ function FiltersPage() {
         setSelectedFilters(selectedFilters.filter(f => !successfullyRemovedFilters.includes(f)));
     }
 
-    const handleSaveConfiguration = () => {
-        setShowSaveModal(true)
-    }
 
     return (
         <Container>
-            <Container className="mt-5 mb-5">
-                <Row className="align-items-stretch gap-3 flex-lg-nowrap">
-                    <Col xs={12} md={12} lg={6}>
-                        <SelectedFilterList
-                            filters={selectedFilters}
-                            onFilterSelect={setSelectedFilter}
-                            setSelectedFilters={setSelectedFilters}
-                            handleConfigureFilter={handleConfigureFilter}
-                            handleRemoveFilter={handleRemoveFilter}
-                            handleRemoveAllFilters={handleRemoveAllFilters}
-                            handleSaveConfiguration={handleSaveConfiguration}
-                        />
-                    </Col>
-                    <Col xs={12} md={12} lg={6}>
-                        <AvailableFilterList filters={availableFilters} onFilterSelect={handleAddFilter}/>
-                    </Col>
-                </Row>
-            </Container>
+            <Nav fill variant="tabs" activeKey={activeTab} className="mb-3 mt-4"
+                 onSelect={(selectedKey) => setActiveTab(selectedKey)}>
+                <Nav.Item>
+                    <Nav.Link eventKey="configuration">Configuration</Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                    <Nav.Link eventKey="simulation" disabled={disableModelBoundsNav}>Simulation</Nav.Link>
+                </Nav.Item>
+            </Nav>
+            {(activeTab === "configuration") && (
+                <Container className="mt-1 mb-0">
+                    <Dropdown className="">
+                        <Dropdown.Toggle variant="outline-dark" id="dropdown-basic">
+                            Configuration
+                        </Dropdown.Toggle>
+
+                        <Dropdown.Menu>
+                            <Dropdown.Item onClick={() => setShowSaveModal(true)}>Save</Dropdown.Item>
+                            <Dropdown.Item onClick={() => setShowLoadModal(true)}>Load</Dropdown.Item>
+                        </Dropdown.Menu>
+                    </Dropdown>
+                    <Row className="align-items-stretch gap-3 flex-lg-nowrap">
+                        <Col xs={12} md={12} lg={6}>
+                            <SelectedFilterList
+                                filters={selectedFilters}
+                                onFilterSelect={setSelectedFilter}
+                                setSelectedFilters={setSelectedFilters}
+                                handleConfigureFilter={handleConfigureFilter}
+                                handleRemoveFilter={handleRemoveFilter}
+                                handleRemoveAllFilters={handleRemoveAllFilters}
+                            />
+                        </Col>
+                        <Col xs={12} md={12} lg={6}>
+                            <AvailableFilterList filters={availableFilters} onFilterSelect={handleAddFilter}/>
+                        </Col>
+                    </Row>
+                </Container>
+            )}
+            {activeTab === "simulation" && (
+                <></>
+            )}
 
             {selectedFilter && (
                 <FilterConfigModal filter={selectedFilter} show={showConfigModal}
@@ -147,8 +172,12 @@ function FiltersPage() {
                              onSave={() => saveConfiguration(fileName)}
 
             />
+            <LoadConfigModal show={showLoadModal} onClose={() => setShowLoadModal(false)}
+                             setFile={setFile} onLoad={() => loadConfiguration(file)}
+            />
+
         </Container>
     );
 }
 
-export default FiltersPage;
+export default MainPage;

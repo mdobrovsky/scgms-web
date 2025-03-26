@@ -5,7 +5,7 @@ import {moveFilterDown, moveFilterUp} from "../services/filterService.jsx";
 
 const SelectedFilterList = ({
                                 filters, onFilterSelect, setSelectedFilters, handleConfigureFilter, handleRemoveFilter,
-                                handleRemoveAllFilters, handleSaveConfiguration
+                                handleRemoveAllFilters
                             }) => {
     const [selectedFilter, setSelectedFilter] = React.useState(null);
 
@@ -97,10 +97,7 @@ const SelectedFilterList = ({
                         disabled={filters.length === 0}>
                     Remove All
                 </Button>
-                <Button variant="outline-dark" onClick={handleSaveConfiguration}
-                        disabled={filters.length === 0}>
-                    Save Configuration
-                </Button>
+
             </ButtonGroup>
         </Card>
     );
@@ -118,7 +115,6 @@ SelectedFilterList.propTypes = {
     handleConfigureFilter: PropTypes.func.isRequired,
     handleRemoveFilter: PropTypes.func.isRequired,
     handleRemoveAllFilters: PropTypes.func.isRequired,
-    handleSaveConfiguration: PropTypes.func.isRequired,
 };
 
 export default SelectedFilterList;

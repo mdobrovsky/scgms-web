@@ -47,7 +47,6 @@ const FilterConfigModal = ({
 
     const handleSaveChanges = async () => {
         const formData = Object.fromEntries(new FormData(formRef.current).entries());
-        console.log("Form data:", formData);
 
         if (!formData) return;
         const newParameters = filter.parameters.map((param) => {
