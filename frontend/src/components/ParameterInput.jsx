@@ -14,6 +14,17 @@ const ParameterInput = ({
             p.parameter_type === "ptDiscrete_Model_Id" || p.parameter_type === "ptSignal_Model_Id"
         )?.value;
 
+        const onChangeTime = (value) => {
+            setFilter((prevFilter) => ({
+                ...prevFilter,
+                parameters: prevFilter.parameters.map((p) =>
+                    p.config_parameter_name === parameter.config_parameter_name
+                        ? {...p, value: value}
+                        : p
+                ),
+            }));
+        }
+
 
 
         useEffect(() => {
@@ -37,9 +48,10 @@ const ParameterInput = ({
                                                    : p
                                            ),
                                        }));
-                                   }}/>;
+                                   }}
+                />;
 
-            case "ptRatTime": { // TODO neuklada to spravne cas
+            case "ptRatTime": {
 
                 // console.log("Days:", days, "Time:", time);
                 // console.log("Parameter value:", parameter);
@@ -54,7 +66,7 @@ const ParameterInput = ({
                 //                   name={parameter.config_parameter_name}
                 //                   defaultValue={formattedTime}/>
                 // </>
-                return <TimeWithDaysInput onChange={null} value={parameter.value} step={1}
+                return <TimeWithDaysInput onChange={onChangeTime} value={parameter.value} step={1}
                                             id={parameter.config_parameter_name} name={parameter.config_parameter_name}
                 />
             }
@@ -62,10 +74,32 @@ const ParameterInput = ({
             case "ptInt64":
             case "ptDouble":
                 return <Form.Control id={parameter.config_parameter_name} type="number"
-                                     name={parameter.config_parameter_name} defaultValue={parameter.value}/>;
+                                     name={parameter.config_parameter_name} defaultValue={parameter.value}
+                                     onChange={(e) => {
+                                         setFilter((prevFilter) => ({
+                                             ...prevFilter,
+                                             parameters: prevFilter.parameters.map((p) =>
+                                                 p.config_parameter_name === parameter.config_parameter_name
+                                                     ? {...p, value: e.target.value}
+                                                     : p
+                                             ),
+                                         }));
+                                     }}
+                />;
             case "ptWChar_Array":
                 return <Form.Control id={parameter.config_parameter_name} type="text"
-                                     name={parameter.config_parameter_name} defaultValue={parameter.value}/>;
+                                     name={parameter.config_parameter_name} defaultValue={parameter.value}
+                                     onChange={(e) => {
+                                         setFilter((prevFilter) => ({
+                                             ...prevFilter,
+                                             parameters: prevFilter.parameters.map((p) =>
+                                                 p.config_parameter_name === parameter.config_parameter_name
+                                                     ? {...p, value: e.target.value}
+                                                     : p
+                                             ),
+                                         }));
+                                     }}
+                />;
             case "ptSignal_Id":
                 return (
                     <Form.Select id={parameter.config_parameter_name} name={parameter.config_parameter_name}
