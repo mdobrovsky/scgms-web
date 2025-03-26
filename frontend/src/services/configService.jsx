@@ -1,5 +1,5 @@
 import axios from "axios";
-import {SAVE_CONFIGURATION_URL} from "../constants/apiConstants.jsx";
+import {LOAD_CONFIGURATION_URL, SAVE_CONFIGURATION_URL} from "../constants/apiConstants.jsx";
 
 export const saveConfiguration = async (configFileName) => {
     try {
@@ -21,5 +21,27 @@ export const saveConfiguration = async (configFileName) => {
         document.body.removeChild(a);
     } catch (error) {
         console.error("Error downloading configuration:", error);
+    }
+}
+
+export const loadConfiguration = async (file) => {
+    try {
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("file_name", file.name);
+        const response = await axios.post(
+            LOAD_CONFIGURATION_URL,
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
+        console.log("Server response:", response.data);
+    } catch (error) {
+        console.error("Error uploading file:", error);
     }
 }
