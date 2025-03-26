@@ -192,6 +192,17 @@ std::string save_configuration(std::string &path) {
     return Succeeded(res) ? "0" : "1";
 }
 
+std::string load_configuration(std::string &path) {
+    refcnt::Swstr_list errors;
+
+    HRESULT res = chain_configuration->Load_From_File(Widen_String(path).c_str(), errors.get());
+    errors.for_each([](const std::wstring &str) {
+        std::wcerr << str << std::endl;
+    });
+
+    return Succeeded(res) ? "0" : "1";
+}
+
 
 std::string remove_filter(int index) {
     HRESULT res = chain_configuration->remove(index);
@@ -238,7 +249,44 @@ std::string get_parameter_default_value(const scgms::NParameter_Type type) {
     return "";
 }
 
-std::vector<std::string> split(const std::string& str, char delimiter) {
+std::string get_parameter_value(scgms::SFilter_Parameter parameter) {
+    std::cout << "is nullptr: " << (parameter == nullptr) << std::endl;
+    scgms::NParameter_Type type;
+    HRESULT res = parameter->Get_Type(&type);
+    HRESULT rc;
+    switch (type) {
+        case scgms::NParameter_Type::ptWChar_Array:
+        case scgms::NParameter_Type::ptDouble_Array:
+            // std::wcout << "Getting wstring: " << parameter.as_wstring(rc, true) << std::endl;
+            return Narrow_WString(parameter.as_wstring(rc, true));
+        case scgms::NParameter_Type::ptInt64_Array: // TODO
+            return "";
+        case scgms::NParameter_Type::ptDouble:
+        case scgms::NParameter_Type::ptRatTime:
+            // std::cout << "Getting double: " << parameter.as_double(rc) << std::endl;
+            return dbl_2_str(parameter.as_double(rc));
+        case scgms::NParameter_Type::ptInt64:
+            return std::to_string(parameter.as_int(rc));
+        case scgms::NParameter_Type::ptBool:
+            return parameter.as_bool(rc) ? "true" : "false";
+        case scgms::NParameter_Type::ptSignal_Model_Id:
+        case scgms::NParameter_Type::ptDiscrete_Model_Id:
+        case scgms::NParameter_Type::ptMetric_Id:
+        case scgms::NParameter_Type::ptSolver_Id:
+        case scgms::NParameter_Type::ptModel_Produced_Signal_Id:
+        case scgms::NParameter_Type::ptSignal_Id:
+            return Narrow_WString(GUID_To_WString(parameter.as_guid(rc)));
+        case scgms::NParameter_Type::ptSubject_Id:
+            return ""; // TODO
+        case scgms::NParameter_Type::ptInvalid:
+            return "";
+        default:
+            break;
+    }
+    return "";
+}
+
+std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::stringstream ss(str);
     std::string token;
@@ -253,12 +301,23 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
 std::vector<double> split_double_array(const std::string &value) {
     std::vector<double> double_array;
     std::vector<std::string> tokens = split(value, ' ');
-    for (const std::string &token : tokens) {
+    for (const std::string &token: tokens) {
         double_array.push_back(std::stod(token));
     }
     return double_array;
 }
 
+
+void get_link(const std::string &index, scgms::SFilter_Configuration_Link &link) {
+    size_t target_index = std::stoi(index);
+    size_t current_index = 0;
+    chain_configuration.for_each([&](scgms::SFilter_Configuration_Link chain_link) {
+        if (current_index == target_index) {
+            link = std::move(chain_link);
+        }
+        current_index++;
+    });
+}
 
 std::string configure_filter(
     const std::string &index,
@@ -269,14 +328,7 @@ std::string configure_filter(
 ) {
     bool ok;
     scgms::SFilter_Configuration_Link link;
-    size_t target_index = std::stoi(index);
-    size_t current_index = 0;
-    chain_configuration.for_each([&](scgms::SFilter_Configuration_Link chain_link) {
-        if (current_index == target_index) {
-            link = std::move(chain_link);
-        }
-        current_index++;
-    });
+    get_link(index, link);
     if (!link) {
         std::cerr << "Failed to add link for filter ID: " << id << std::endl;
         return "1";
@@ -290,6 +342,7 @@ std::string configure_filter(
     const wchar_t *config_parameter_name_wchar = config_parameter_name_wstring.c_str();
 
     scgms::SFilter_Parameter parameter = link.Resolve_Parameter(config_parameter_name_wchar);
+
 
     if (!parameter) {
         parameter = link.Add_Parameter(parameter_type, config_parameter_name_wchar);
@@ -364,7 +417,6 @@ std::string move_filter_down(int index) {
     HRESULT res = chain_configuration->move(index, index + 1);
     return Succeeded(res) ? "0" : "1";
 }
-
 
 
 SignalInfo convert_signal_descriptor(const scgms::TSignal_Descriptor &desc) {
@@ -474,6 +526,37 @@ std::vector<MetricInfo> get_available_metrics() {
 }
 
 
+void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, FilterInfo &info,
+                                       scgms::SFilter_Configuration_Link *link = nullptr) {
+    info.id = Narrow_WString(GUID_To_WString(filter.id));
+    info.flags = static_cast<int>(filter.flags);
+    info.description = Narrow_WString(filter.description);
+    info.parameters_count = filter.parameters_count;
+
+    for (size_t j = 0; j < filter.parameters_count; ++j) {
+        FilterParameter param;
+        scgms::NParameter_Type type = filter.parameter_type[j];
+        param.parameter_type = Narrow_WString(ParameterTypeToString(type));
+        param.ui_parameter_name = Narrow_WString(filter.ui_parameter_name[j] ? filter.ui_parameter_name[j] : L"");
+        param.config_parameter_name = Narrow_WString(filter.config_parameter_name[j]
+                                                         ? filter.config_parameter_name[j]
+                                                         : L"");
+        param.ui_parameter_tooltip = Narrow_WString(filter.ui_parameter_tooltip[j]
+                                                        ? filter.ui_parameter_tooltip[j]
+                                                        : L"");
+        // std::wcout << p.configuration_name() << std::endl;
+        if (link == nullptr) {
+            param.default_value = get_parameter_default_value(type);
+        }
+        else {
+            scgms::SFilter_Parameter p = link->Resolve_Parameter(filter.config_parameter_name[j]);
+            param.default_value = p ? get_parameter_value(p) : get_parameter_default_value(type);
+
+        }
+        info.parameters.push_back(param);
+    }
+}
+
 std::vector<FilterInfo> get_available_filters() {
     const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
     std::vector<FilterInfo> filters;
@@ -484,31 +567,23 @@ std::vector<FilterInfo> get_available_filters() {
     for (size_t i = 0; i < filter_list.size(); ++i) {
         const scgms::TFilter_Descriptor &filter = filter_list[i];
         FilterInfo info;
-        info.id = Narrow_WString(GUID_To_WString(filter.id));
-        info.flags = static_cast<int>(filter.flags);
-        info.description = Narrow_WString(filter.description);
-        info.parameters_count = filter.parameters_count;
-
-        for (size_t j = 0; j < filter.parameters_count; ++j) {
-            FilterParameter param;
-            scgms::NParameter_Type type = filter.parameter_type[j];
-            param.parameter_type = Narrow_WString(ParameterTypeToString(type));
-            param.ui_parameter_name = Narrow_WString(filter.ui_parameter_name[j] ? filter.ui_parameter_name[j] : L"");
-            param.config_parameter_name = Narrow_WString(filter.config_parameter_name[j]
-                                                             ? filter.config_parameter_name[j]
-                                                             : L"");
-            param.ui_parameter_tooltip = Narrow_WString(filter.ui_parameter_tooltip[j]
-                                                            ? filter.ui_parameter_tooltip[j]
-                                                            : L"");
-            param.default_value = get_parameter_default_value(type);
-            info.parameters.push_back(param);
-        }
+        convert_filter_descriptor_to_info(filter, info);
         filters.push_back(info);
     }
 
     return filters;
 }
 
+
+std::vector<FilterInfo> get_chain_filters() {
+    std::vector<FilterInfo> filters;
+    chain_configuration.for_each([&filters](scgms::SFilter_Configuration_Link link) mutable {
+        FilterInfo info;
+        convert_filter_descriptor_to_info(link.descriptor(), info, &link);
+        filters.push_back(info);
+    });
+    return filters;
+}
 
 HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
     if (filter) {
@@ -599,6 +674,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
     m.def("add_filter", &add_filter, "Adds a filter to the configuration");
     m.def("save_configuration", &save_configuration, "Saves the configuration to a file");
+    m.def("load_configuration", &load_configuration, "Loads the configuration from a file");
     m.def("configure_filter", &configure_filter, "Configures a filter in the configuration");
     m.def("remove_filter", &remove_filter, "Removes a filter from the configuration");
     m.def("move_filter_up", &move_filter_up, "Moves a filter up in the configuration");
@@ -678,7 +754,24 @@ PYBIND11_MODULE(scgms_wrapper, m) {
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    // chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    HRESULT res = chain_configuration->Load_From_File(L"../config.ini", nullptr);
+    if (!Succeeded(res)) {
+        std::cerr << "Failed to load configuration from file." << std::endl;
+        return 1;
+    }
+    std::vector<FilterInfo> filters = get_chain_filters();
+    for (const FilterInfo &filter: filters) {
+        std::cout << "Filter ID: " << filter.id << std::endl;
+        std::cout << "Filter Description: " << filter.description << std::endl;
+        std::cout << "Filter Parameters Count: " << filter.parameters_count << std::endl;
+        for (const FilterParameter &param: filter.parameters) {
+            std::cout << "Parameter Type: " << param.parameter_type << std::endl;
+            std::cout << "UI Parameter Name: " << param.ui_parameter_name << std::endl;
+            std::cout << "Config Parameter Name: " << param.config_parameter_name << std::endl;
+            std::cout << "UI Parameter Tooltip: " << param.ui_parameter_tooltip << std::endl;
+            std::cout << "Default Value: " << param.default_value << std::endl;
+        }
+    }
     // std::cout << add_filter("{C0E942B9-3928-4B81-9B43-A347668200BA}");
     // configure_filter("0","{C0E942B9-3928-4B81-9B43-A347668200BA}",
     //     "ptBool", "Log_Segments_Individually", "true");
