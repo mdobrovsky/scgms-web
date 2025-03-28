@@ -1,5 +1,10 @@
 import axios from "axios";
-import {LOAD_CONFIGURATION_URL, SAVE_CONFIGURATION_URL} from "../constants/apiConstants.jsx";
+import {
+    FETCH_CHAIN_FILTERS_URL,
+    FETCH_FILTERS_URL,
+    LOAD_CONFIGURATION_URL,
+    SAVE_CONFIGURATION_URL
+} from "../constants/apiConstants.jsx";
 
 export const saveConfiguration = async (configFileName) => {
     try {
@@ -41,7 +46,19 @@ export const loadConfiguration = async (file) => {
             }
         );
         console.log("Server response:", response.data);
+        return response.data;
     } catch (error) {
         console.error("Error uploading file:", error);
     }
+
 }
+
+export const fetchChainFilters = async () => {
+    try {
+        const response = await axios.get(FETCH_CHAIN_FILTERS_URL);
+        return response.data.filters;
+    } catch (error) {
+        console.error("Error fetching filters:", error);
+        return [];
+    }
+};

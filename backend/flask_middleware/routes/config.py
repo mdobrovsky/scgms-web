@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, send_file
 import os
-from services.config_service import save_configuration_service
+from services.config_service import save_configuration_service, load_configuration_service, get_chain_filters_service
 
 CONFIG_DIRECTORY = "./configurations"
 SAVED_CONFIGS_DIRECTORY = CONFIG_DIRECTORY + "/saved"
@@ -38,10 +38,12 @@ def load_configuration():
     save_path = f"{LOADED_CONFIGS_DIRECTORY}/{file_name}"
     uploaded_file.save(save_path)
     print(uploaded_file)
-    # Volání tvé služby pro zpracování
-    # result = save_configuration_service(save_path)
-    result = "0"
-    if result == "0":
-        return jsonify({"message": "File saved and processed successfully"})
-    else:
-        return jsonify({"error": "Processing failed"}), 500
+    result = load_configuration_service(save_path)
+    # result = "0"
+    print("result: ", result)
+    return jsonify(result)
+
+@config_bp.route("/fetch_filters", methods=["GET"])
+def get_chain_filters():
+    filters = get_chain_filters_service()
+    return jsonify({"filters": filters})

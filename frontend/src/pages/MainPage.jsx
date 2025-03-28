@@ -3,14 +3,15 @@ import {Container, Row, Col, Nav, Dropdown, Modal, Form} from "react-bootstrap";
 import AvailableFilterList from "../components/AvailableFilterList.jsx";
 import FilterConfigModal from "../components/FilterConfigModal";
 import SaveConfigModal from "../components/SaveConfigModal";
-import {fetchFilters, addFilter, removeFilter} from "../services/filterService";
+import {fetchFilters, addFilter, removeFilter, configureFilter} from "../services/filterService";
 import {fetchSignals} from "../services/signalService";
 import {fetchModels} from "../services/modelService.jsx";
 import {fetchSolvers} from "../services/solverService.jsx";
-import {saveConfiguration, loadConfiguration} from "../services/configService.jsx";
+import {saveConfiguration, loadConfiguration, fetchChainFilters} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
 import LoadConfigModal from "../components/LoadConfigModal.jsx";
+import {toast} from "react-toastify";
 
 function MainPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
@@ -87,6 +88,44 @@ function MainPage() {
             setSelectedFilters(selectedFilters.filter(f => f.id !== filter.id));
 
         }
+    }
+
+    const handleLoadConfig = async (file) => {
+        await toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const result = await loadConfiguration(file);
+                    console.log("Load Config Result:", result);
+                    if (result === "0") {
+                        const fetchedFilters = await fetchChainFilters();
+                        if (fetchedFilters) {
+                            setSelectedFilters(fetchedFilters);
+                            resolve("Configuration loaded successfully");
+                        } else {
+                            reject(new Error("Error loading configuration"));
+                        }
+                    } else {
+                        reject(new Error("Error loading configuration"));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            }),
+            {
+                pending: "Loading configuration...",
+                success: {
+                    render({data}) {
+                        return data; // render success message
+                    },
+                    icon: "✅"
+                },
+                error: {
+                    render({data}) {
+                        return `Error: ${data?.message || "Unknown error"}`;
+                    }
+                }
+            }
+        )
     }
 
     const handleRemoveAllFilters = async () => {
@@ -173,7 +212,7 @@ function MainPage() {
 
             />
             <LoadConfigModal show={showLoadModal} onClose={() => setShowLoadModal(false)}
-                             setFile={setFile} onLoad={() => loadConfiguration(file)}
+                             setFile={setFile} onLoad={() => handleLoadConfig(file)}
             />
 
         </Container>
