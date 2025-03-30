@@ -547,11 +547,9 @@ void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, 
         // std::wcout << p.configuration_name() << std::endl;
         if (link == nullptr) {
             param.default_value = get_parameter_default_value(type);
-        }
-        else {
+        } else {
             scgms::SFilter_Parameter p = link->Resolve_Parameter(filter.config_parameter_name[j]);
             param.default_value = p ? get_parameter_value(p) : get_parameter_default_value(type);
-
         }
         info.parameters.push_back(param);
     }
@@ -597,41 +595,32 @@ HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
     return S_OK;
 }
 
-int execute(const std::wstring &config_path) {
-    // Load Configuration
-    scgms::SPersistent_Filter_Chain_Configuration configuration = scgms::SPersistent_Filter_Chain_Configuration();
+int execute() {
     refcnt::Swstr_list errors;
 
+    std::cout << "Configuration loaded successfully." << std::endl;
 
-    if (Succeeded(configuration->Load_From_File(config_path.c_str(), errors.get()))) {
-        std::cout << "Configuration loaded successfully." << std::endl;
+    // Execute the filter chain
+    Global_Filter_Executor = scgms::SFilter_Executor{
+        chain_configuration.get(),
+        reinterpret_cast<scgms::TOn_Filter_Created>(on_filter_created_callback), // Callback function
+        nullptr, // Callback data
+        errors,
+    };
 
-        // Execute the filter chain
-        Global_Filter_Executor = scgms::SFilter_Executor{
-            configuration.get(),
-            reinterpret_cast<scgms::TOn_Filter_Created>(on_filter_created_callback), // Callback function
-            nullptr, // Callback data
-            errors,
-        };
+    if (Global_Filter_Executor) {
+        std::cout << "Filter chain execution started successfully." << std::endl;
 
-        if (Global_Filter_Executor) {
-            std::cout << "Filter chain execution started successfully." << std::endl;
-
-            // Wait for execution to complete
-            Global_Filter_Executor->Terminate(TRUE);
-            std::cout << "Filter chain execution completed." << std::endl;
-        } else {
-            std::wcerr << L"Failed to create filter executor." << std::endl;
-            errors.for_each([](const std::wstring &str) {
-                std::wcerr << str << std::endl;
-            });
-        }
+        // Wait for execution to complete
+        Global_Filter_Executor->Terminate(TRUE);
+        std::cout << "Filter chain execution completed." << std::endl;
     } else {
-        std::wcerr << L"Failed to load configuration from file: " << config_path << std::endl;
+        std::wcerr << L"Failed to create filter executor." << std::endl;
         errors.for_each([](const std::wstring &str) {
             std::wcerr << str << std::endl;
         });
     }
+
 
     return 0;
 }
@@ -675,6 +664,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("add_filter", &add_filter, "Adds a filter to the configuration");
     m.def("save_configuration", &save_configuration, "Saves the configuration to a file");
     m.def("load_configuration", &load_configuration, "Loads the configuration from a file");
+    m.def("get_chain_filters", &get_chain_filters, "Returns filters in the configuration");
     m.def("configure_filter", &configure_filter, "Configures a filter in the configuration");
     m.def("remove_filter", &remove_filter, "Removes a filter from the configuration");
     m.def("move_filter_up", &move_filter_up, "Moves a filter up in the configuration");
@@ -759,23 +749,7 @@ int main() {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
     }
-    std::vector<FilterInfo> filters = get_chain_filters();
-    for (const FilterInfo &filter: filters) {
-        std::cout << "Filter ID: " << filter.id << std::endl;
-        std::cout << "Filter Description: " << filter.description << std::endl;
-        std::cout << "Filter Parameters Count: " << filter.parameters_count << std::endl;
-        for (const FilterParameter &param: filter.parameters) {
-            std::cout << "Parameter Type: " << param.parameter_type << std::endl;
-            std::cout << "UI Parameter Name: " << param.ui_parameter_name << std::endl;
-            std::cout << "Config Parameter Name: " << param.config_parameter_name << std::endl;
-            std::cout << "UI Parameter Tooltip: " << param.ui_parameter_tooltip << std::endl;
-            std::cout << "Default Value: " << param.default_value << std::endl;
-        }
-    }
-    // std::cout << add_filter("{C0E942B9-3928-4B81-9B43-A347668200BA}");
-    // configure_filter("0","{C0E942B9-3928-4B81-9B43-A347668200BA}",
-    //     "ptBool", "Log_Segments_Individually", "true");
-    // chain_configuration->Save_To_File(L"test_config.ini", nullptr);
+    execute();
     return 0;
 }
 #endif

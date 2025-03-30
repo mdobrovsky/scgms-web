@@ -11,4 +11,8 @@ const convertDoubleToTimeParts = (value) => {
     return { days, hours, minutes, seconds };
 };
 
+export const updateFilterIndexes = (filters) => {
+    return filters.map((f, i) => ({ ...f, index: i.toString() }));
+};
+
 export default convertDoubleToTimeParts;

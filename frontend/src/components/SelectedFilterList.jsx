@@ -2,6 +2,7 @@ import React from "react";
 import {Button, ButtonGroup, Card, ListGroup} from "react-bootstrap";
 import PropTypes from "prop-types";
 import {moveFilterDown, moveFilterUp} from "../services/filterService.jsx";
+import {updateFilterIndexes} from "../services/utils.jsx";
 
 const SelectedFilterList = ({
                                 filters, onFilterSelect, setSelectedFilters, handleConfigureFilter, handleRemoveFilter,
@@ -22,8 +23,10 @@ const SelectedFilterList = ({
                 const newFilters = [...filters];
                 newFilters.splice(index, 1);
                 newFilters.splice(index - 1, 0, selectedFilter);
-                setSelectedFilters(newFilters);
+                const updated = updateFilterIndexes(newFilters);
+                setSelectedFilters(updated);
                 onFilterSelect(selectedFilter);
+                setSelectedFilter(selectedFilter);
             }
         }
     }
@@ -36,8 +39,10 @@ const SelectedFilterList = ({
                 const newFilters = [...filters];
                 newFilters.splice(index, 1);
                 newFilters.splice(index + 1, 0, selectedFilter);
-                setSelectedFilters(newFilters);
+                const updated = updateFilterIndexes(newFilters);
+                setSelectedFilters(updated);
                 onFilterSelect(selectedFilter);
+                setSelectedFilter(selectedFilter);
             }
         }
     }

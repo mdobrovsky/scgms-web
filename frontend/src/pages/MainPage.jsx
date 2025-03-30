@@ -12,6 +12,7 @@ import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
 import LoadConfigModal from "../components/LoadConfigModal.jsx";
 import {toast} from "react-toastify";
+import {updateFilterIndexes} from "../services/utils.jsx";
 
 function MainPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
@@ -60,12 +61,13 @@ function MainPage() {
     }, []);
 
 
+
+
     const handleAddFilter = async (filter) => {
         const result = await addFilter(filter.id);
         if (result === "0") {
-            // setSelectedFilters([...selectedFilters, filter]);
-            setSelectedFilters([...selectedFilters, {...filter, index: selectedFilters.length.toString()}]);
-
+            const updated = updateFilterIndexes([...selectedFilters, filter]);
+            setSelectedFilters(updated);
         }
         console.log("Selected Filters:", selectedFilters);
         // add index atribute to filter object
@@ -86,6 +88,8 @@ function MainPage() {
         const result = await removeFilter(selectedFilters.indexOf(filter));
         if (result === "0") {
             setSelectedFilters(selectedFilters.filter(f => f.id !== filter.id));
+            const updated = updateFilterIndexes([...selectedFilters, filter]);
+            setSelectedFilters(updated);
 
         }
     }
@@ -99,7 +103,8 @@ function MainPage() {
                     if (result === "0") {
                         const fetchedFilters = await fetchChainFilters();
                         if (fetchedFilters) {
-                            setSelectedFilters(fetchedFilters);
+                            const updated = updateFilterIndexes(fetchedFilters);
+                            setSelectedFilters(updated);
                             resolve("Configuration loaded successfully");
                         } else {
                             reject(new Error("Error loading configuration"));
