@@ -584,13 +584,13 @@ std::vector<FilterInfo> get_chain_filters() {
 }
 
 HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
-    if (filter) {
-        std::wcout << L"Filter created successfully." << std::endl;
-
-        scgms::SDrawing_Filter_Inspection_v2 insp(scgms::SFilter (filter));
-    } else {
+    if (!filter) {
         std::wcerr << L"Error: Filter creation failed!" << std::endl;
+        return E_FAIL;
     }
+    std::wcout << L"Filter created successfully." << std::endl;
+
+    scgms::SDrawing_Filter_Inspection_v2 insp(scgms::SFilter (filter));
 
     return S_OK;
 }
@@ -610,9 +610,9 @@ int execute() {
 
     if (Global_Filter_Executor) {
         std::cout << "Filter chain execution started successfully." << std::endl;
-
         // Wait for execution to complete
         Global_Filter_Executor->Terminate(TRUE);
+
         std::cout << "Filter chain execution completed." << std::endl;
     } else {
         std::wcerr << L"Failed to create filter executor." << std::endl;
@@ -711,7 +711,8 @@ PYBIND11_MODULE(scgms_wrapper, m) {
             .def_readonly("description", &ModelInfo::description)
             .def_readonly("db_table_name", &ModelInfo::db_table_name)
             .def_readonly("number_of_parameters", &ModelInfo::number_of_parameters)
-            .def_readonly("number_of_segment_specific_parameters", &ModelInfo::number_of_segment_specific_parameters)
+            .def_readonly("number_of_segment_specific_parameters",
+                          &ModelInfo::number_of_segment_specific_parameters)
             .def_readonly("parameter_types", &ModelInfo::parameter_types)
             .def_readonly("parameter_ui_names", &ModelInfo::parameter_ui_names)
             .def_readonly("parameter_db_column_names", &ModelInfo::parameter_db_column_names)
@@ -744,7 +745,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    HRESULT res = chain_configuration->Load_From_File(L"../config.ini", nullptr);
+    HRESULT res = chain_configuration->Load_From_File(L"../config2.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
