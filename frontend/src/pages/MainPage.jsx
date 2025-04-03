@@ -1,5 +1,5 @@
 import {useState, useEffect} from "react";
-import {Container, Row, Col, Nav, Dropdown, Modal, Form} from "react-bootstrap";
+import {Container, Row, Col, Nav, Dropdown, Modal, Form, Button} from "react-bootstrap";
 import AvailableFilterList from "../components/AvailableFilterList.jsx";
 import FilterConfigModal from "../components/FilterConfigModal";
 import SaveConfigModal from "../components/SaveConfigModal";
@@ -7,7 +7,12 @@ import {fetchFilters, addFilter, removeFilter, configureFilter} from "../service
 import {fetchSignals} from "../services/signalService";
 import {fetchModels} from "../services/modelService.jsx";
 import {fetchSolvers} from "../services/solverService.jsx";
-import {saveConfiguration, loadConfiguration, fetchChainFilters} from "../services/configService.jsx";
+import {
+    saveConfiguration,
+    loadConfiguration,
+    fetchChainFilters,
+    executeConfiguration, fetchSvgs
+} from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
 import LoadConfigModal from "../components/LoadConfigModal.jsx";
@@ -30,6 +35,7 @@ function MainPage() {
     const [fileNameError, setFileNameError] = useState("");
     const [activeTab, setActiveTab] = useState("configuration");
     const [file, setFile] = useState(null);
+    const [svgs, setSvgs] = useState(null);
     const disableModelBoundsNav = selectedFilters.length === 0;
 
     useEffect(() => {
@@ -61,7 +67,45 @@ function MainPage() {
     }, []);
 
 
+    const handleStartButton = async () => {
+        await toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const result = await executeConfiguration();
+                    console.log("Execute Config Result:", result);
+                    if (result === "0") {
+                        const svgs = await fetchSvgs();
+                        console.log("Fetched SVGs:", svgs);
+                        if (svgs) {
+                            setSvgs(svgs);
+                            resolve("Simulation started successfully");
+                        } else {
+                            reject(new Error("Error starting simulation."));
+                        }
 
+                    } else {
+                        reject(new Error("Error starting simulation."));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            }),
+            {
+                pending: "Starting simulation...",
+                success: {
+                    render({data}) {
+                        return data; // render success message
+                    },
+                    icon: "✅"
+                },
+                error: {
+                    render({data}) {
+                        return `Error: ${data?.message || "Unknown error"}`;
+                    }
+                }
+            }
+        )
+    }
 
     const handleAddFilter = async (filter) => {
         const result = await addFilter(filter.id);
@@ -191,7 +235,9 @@ function MainPage() {
                 </Container>
             )}
             {activeTab === "simulation" && (
-                <></>
+                <Container>
+                    <Button variant="outline-dark" onClick={handleStartButton}>Start</Button>
+                </Container>
             )}
 
             {selectedFilter && (

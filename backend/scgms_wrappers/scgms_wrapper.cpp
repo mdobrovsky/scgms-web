@@ -35,6 +35,7 @@ scgms::SFilter_Executor Global_Filter_Executor;
 
 scgms::SPersistent_Filter_Chain_Configuration chain_configuration;
 
+
 // structures for filter info
 struct FilterParameter {
     std::string parameter_type;
@@ -95,6 +96,14 @@ struct MetricInfo {
     std::string id;
     std::string description;
 };
+
+struct SvgInfo {
+    std::string id;
+    std::string name;
+    std::string svg_str;
+};
+
+std::vector<SvgInfo> svgs;
 
 MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
     MetricInfo metric;
@@ -250,7 +259,7 @@ std::string get_parameter_default_value(const scgms::NParameter_Type type) {
 }
 
 std::string get_parameter_value(scgms::SFilter_Parameter parameter) {
-    std::cout << "is nullptr: " << (parameter == nullptr) << std::endl;
+    // std::cout << "is nullptr: " << (parameter == nullptr) << std::endl;
     scgms::NParameter_Type type;
     HRESULT res = parameter->Get_Type(&type);
     HRESULT rc;
@@ -583,19 +592,63 @@ std::vector<FilterInfo> get_chain_filters() {
     return filters;
 }
 
-HRESULT on_filter_created_callback(const scgms::IFilter *filter, void *data) {
+HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *data) {
     if (!filter) {
         std::wcerr << L"Error: Filter creation failed!" << std::endl;
         return E_FAIL;
     }
-    std::wcout << L"Filter created successfully." << std::endl;
 
-    scgms::SDrawing_Filter_Inspection_v2 insp(scgms::SFilter (filter));
+    std::wcout << L"Filter created." << std::endl;
 
+    scgms::SDrawing_Filter_Inspection_v2 insp = scgms::SFilter{filter};
+
+    if (insp) {
+        auto caps = refcnt::Create_Container_shared<scgms::TPlot_Descriptor>(nullptr, nullptr);
+
+        if (insp->Get_Capabilities(caps.get()) == S_OK && caps->empty() != S_OK) {
+            scgms::TPlot_Descriptor *begin = nullptr;
+            scgms::TPlot_Descriptor *end = nullptr;
+
+            if (caps->get(&begin, &end) == S_OK) {
+                int plot_index = 0;
+                std::wcout << L"Available plots: " << std::distance(begin, end) << std::endl;
+
+                for (auto it = begin; it != end; ++it) {
+                    auto svg = refcnt::Create_Container_shared<char>(nullptr, nullptr);
+
+                    scgms::TDraw_Options opts{};
+                    opts.width = 800;
+                    opts.height = 600;
+                    opts.in_signals = nullptr;
+                    opts.reference_signals = nullptr;
+                    opts.signal_count = 0;
+                    opts.segments = nullptr;
+                    opts.segment_count = 0;
+                    std::cout << "\n=== SVG #" << plot_index << " (name: " << Narrow_WString(it->name)
+                            << ", guid: " << Narrow_WString(GUID_To_WString(it->id)) << ") ===\n";
+                    HRESULT res = insp->Draw(&it->id, svg.get(), &opts);
+                    if (Succeeded(res)) {
+                        auto svg_str = refcnt::Char_Container_To_String(svg.get());
+                        std::cout << svg_str << "\n";
+                        SvgInfo svg_info;
+                        svg_info.id = Narrow_WString(GUID_To_WString(it->id));
+                        svg_info.name = Narrow_WString(it->name);
+                        svg_info.svg_str = svg_str;
+                        svgs.push_back(svg_info);
+                    } else {
+                        std::cout << "Failed to draw SVG, error description: " << Narrow_WChar(Describe_Error(res)) <<
+                                std::endl;
+                    }
+                    ++plot_index;
+                }
+            }
+        }
+    }
     return S_OK;
 }
 
-int execute() {
+
+std::string execute() {
     refcnt::Swstr_list errors;
 
     std::cout << "Configuration loaded successfully." << std::endl;
@@ -611,7 +664,7 @@ int execute() {
     if (Global_Filter_Executor) {
         std::cout << "Filter chain execution started successfully." << std::endl;
         // Wait for execution to complete
-        Global_Filter_Executor->Terminate(TRUE);
+        Global_Filter_Executor->Terminate(FALSE);
 
         std::cout << "Filter chain execution completed." << std::endl;
     } else {
@@ -619,10 +672,18 @@ int execute() {
         errors.for_each([](const std::wstring &str) {
             std::wcerr << str << std::endl;
         });
+        return "1";
     }
+    return "0";
+}
 
-
-    return 0;
+std::vector<SvgInfo> get_svgs() {
+    if (svgs.empty()) {
+        std::cerr << "No SVGs available." << std::endl;
+        return {};
+    }
+    std::cout << "SVGs available: " << svgs.size() << std::endl;
+    return svgs;
 }
 
 /**
@@ -669,6 +730,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("remove_filter", &remove_filter, "Removes a filter from the configuration");
     m.def("move_filter_up", &move_filter_up, "Moves a filter up in the configuration");
     m.def("move_filter_down", &move_filter_down, "Moves a filter down in the configuration");
+    m.def("execute", &execute, "Executes the filter chain");
     // Expose structures for working with filters
     namespace py = pybind11;
     py::class_<FilterParameter>(m, "FilterParameter")
@@ -741,11 +803,19 @@ PYBIND11_MODULE(scgms_wrapper, m) {
             .def_readonly("description", &MetricInfo::description);
     py::bind_vector<std::vector<MetricInfo> >(m, "MetricInfoVector");
     m.def("get_available_metrics", &get_available_metrics, "Returns available metrics");
+
+    // Binding for SvgInfo
+    py::class_<SvgInfo>(m, "SvgInfo")
+            .def_readonly("id", &SvgInfo::id)
+            .def_readonly("name", &SvgInfo::name)
+            .def_readonly("svg_str", &SvgInfo::svg_str);
+    py::bind_vector<std::vector<SvgInfo> >(m, "SvgInfoVector");
+    m.def("get_svgs", &get_svgs, "Returns SVGs from the filter chain");
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    HRESULT res = chain_configuration->Load_From_File(L"../config2.ini", nullptr);
+    HRESULT res = chain_configuration->Load_From_File(L"../new_conf.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
