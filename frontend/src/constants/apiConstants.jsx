@@ -4,6 +4,7 @@ export const FETCH_FILTERS_URL = `${API_BASE_URL}/filters/fetch`;
 
 export const ADD_FILTER_URL = `${API_BASE_URL}/filters/add`;
 export const CONFIGURE_FILTER_URL = `${API_BASE_URL}/filters/configure`;
+export const INIT_CONFIGURATION_URL = `${API_BASE_URL}/config/init`;
 export const SAVE_CONFIGURATION_URL = `${API_BASE_URL}/config/save`;
 export const LOAD_CONFIGURATION_URL = `${API_BASE_URL}/config/load`;
 export const EXECUTE_CONFIGURATION_URL = `${API_BASE_URL}/config/execute`;

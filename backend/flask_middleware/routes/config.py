@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, send_file
 import os
 from services.config_service import save_configuration_service, load_configuration_service, get_chain_filters_service, \
-    get_svgs_service, execute_service
+    get_svgs_service, execute_service, init_service
 
 CONFIG_DIRECTORY = "./configurations"
 SAVED_CONFIGS_DIRECTORY = CONFIG_DIRECTORY + "/saved"
@@ -9,6 +9,11 @@ LOADED_CONFIGS_DIRECTORY = CONFIG_DIRECTORY + "/loaded"
 
 
 config_bp = Blueprint("config", __name__)
+
+@config_bp.route("/init", methods=["GET"])
+def init_config():
+    result = init_service()
+    return jsonify({"result": result})
 
 
 @config_bp.route("/save", methods=["POST"])

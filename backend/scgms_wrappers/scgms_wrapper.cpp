@@ -34,7 +34,10 @@ solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so t
 scgms::SFilter_Executor Global_Filter_Executor;
 
 scgms::SPersistent_Filter_Chain_Configuration chain_configuration;
-
+scgms::SDrawing_Filter_Inspection_v2 insp;
+int drawing_v2_width;
+int drawing_v2_height;
+std::mutex drawing_mutex;
 
 // structures for filter info
 struct FilterParameter {
@@ -367,6 +370,7 @@ std::string configure_filter(
             return "1";
         }
     }
+
     HRESULT res = E_FAIL;
     GUID guid;
 
@@ -599,66 +603,140 @@ std::vector<FilterInfo> get_chain_filters() {
     return filters;
 }
 
+int update_output_filters_parameters() {
+    chain_configuration.for_each([](scgms::SFilter_Configuration_Link link) mutable {
+        if (IsEqualGUID(link.descriptor().id, scgms::IID_Drawing_Filter_v2)) {
+            scgms::SFilter_Parameter width_p = link.Resolve_Parameter(link.descriptor().config_parameter_name[0]);
+            std::string w_value = get_parameter_value(width_p);
+            drawing_v2_width = w_value.empty()
+            ? 800
+            : std::stoi(w_value);
+            scgms::SFilter_Parameter height_p = link.Resolve_Parameter(link.descriptor().config_parameter_name[1]);
+            std::string h_value = get_parameter_value(height_p);
+            drawing_v2_height = h_value.empty()
+            ? 600
+            : std::stoi(h_value);
+            std::cout << "Drawing filter width: " << drawing_v2_width << std::endl;
+            std::cout << "Drawing filter height: " << drawing_v2_height << std::endl;
+        }
+    });
+    return 0;
+}
+
+
+
 HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *data) {
     if (!filter) {
         std::wcerr << L"Error: Filter creation failed!" << std::endl;
         return E_FAIL;
     }
 
-    std::wcout << L"Filter created." << std::endl;
-
-    scgms::SDrawing_Filter_Inspection_v2 insp = scgms::SFilter{filter};
-
-    if (insp) {
-        auto caps = refcnt::Create_Container_shared<scgms::TPlot_Descriptor>(nullptr, nullptr);
-
-        if (insp->Get_Capabilities(caps.get()) == S_OK && caps->empty() != S_OK) {
-            scgms::TPlot_Descriptor *begin = nullptr;
-            scgms::TPlot_Descriptor *end = nullptr;
-
-            if (caps->get(&begin, &end) == S_OK) {
-                int plot_index = 0;
-                std::wcout << L"Available plots: " << std::distance(begin, end) << std::endl;
-
-                for (auto it = begin; it != end; ++it) {
-                    auto svg = refcnt::Create_Container_shared<char>(nullptr, nullptr);
-
-                    scgms::TDraw_Options opts{};
-                    opts.width = 800;
-                    opts.height = 600;
-                    opts.in_signals = nullptr;
-                    opts.reference_signals = nullptr;
-                    opts.signal_count = 0;
-                    opts.segments = nullptr;
-                    opts.segment_count = 0;
-                    std::cout << "\n=== SVG #" << plot_index << " (name: " << Narrow_WString(it->name)
-                            << ", guid: " << Narrow_WString(GUID_To_WString(it->id)) << ") ===\n";
-                    HRESULT res = insp->Draw(&it->id, svg.get(), &opts);
-                    if (Succeeded(res)) {
-                        auto svg_str = refcnt::Char_Container_To_String(svg.get());
-                        std::cout << svg_str << "\n";
-                        SvgInfo svg_info;
-                        svg_info.id = Narrow_WString(GUID_To_WString(it->id));
-                        svg_info.name = Narrow_WString(it->name);
-                        svg_info.svg_str = svg_str;
-                        svgs.push_back(svg_info);
-                    } else {
-                        std::cout << "Failed to draw SVG, error description: " << Narrow_WChar(Describe_Error(res)) <<
-                                std::endl;
-                    }
-                    ++plot_index;
-                }
-            }
-        }
+    if (scgms::SDrawing_Filter_Inspection_v2 insp_v2 = scgms::SDrawing_Filter_Inspection_v2{ scgms::SFilter{filter} }) {
+        std::lock_guard<std::mutex> lock(drawing_mutex);
+        insp = insp_v2;
     }
+
+
     return S_OK;
 }
 
 
-std::string execute() {
-    refcnt::Swstr_list errors;
+void get_drawing_opts(
+    scgms::TDraw_Options &opts,
+    scgms::SDrawing_Filter_Inspection_v2 insp,
+    refcnt::SVector_Container<uint64_t>& segments,
+   refcnt::SVector_Container<GUID>& signals
+) {
+    opts = {};
+    opts.width = drawing_v2_width;
+    opts.height = drawing_v2_height;
 
-    std::cout << "Configuration loaded successfully." << std::endl;
+    segments = refcnt::Create_Container_shared<uint64_t>(nullptr, nullptr);
+    if (insp->Get_Available_Segments(segments.get()) == S_OK) {
+        uint64_t* seg_begin = nullptr;
+        uint64_t* seg_end = nullptr;
+        if (segments->get(&seg_begin, &seg_end) == S_OK && seg_begin != seg_end) {
+            opts.segments = seg_begin;
+            opts.segment_count = std::distance(seg_begin, seg_end);
+
+            signals = refcnt::Create_Container_shared<GUID>(nullptr, nullptr);
+            if (insp->Get_Available_Signals(*seg_begin, signals.get()) == S_OK) {
+                GUID* sig_begin = nullptr;
+                GUID* sig_end = nullptr;
+                if (signals->get(&sig_begin, &sig_end) == S_OK && sig_begin != sig_end) {
+                    opts.in_signals = sig_begin;
+                    opts.reference_signals = sig_begin;
+                    opts.signal_count = std::distance(sig_begin, sig_end);
+                }
+            }
+        }
+    }
+}
+
+
+void retrieve_drawings() {
+    auto caps = refcnt::Create_Container_shared<scgms::TPlot_Descriptor>(nullptr, nullptr);
+
+    if (insp->Get_Capabilities(caps.get()) == S_OK && caps->empty() != S_OK) {
+        scgms::TPlot_Descriptor *begin = nullptr;
+        scgms::TPlot_Descriptor *end = nullptr;
+
+        if (caps->get(&begin, &end) == S_OK) {
+            int plot_index = 0;
+            std::wcout << L"Available plots: " << std::distance(begin, end) << std::endl;
+
+            for (auto it = begin; it != end; ++it) {
+                auto svg = refcnt::Create_Container_shared<char>(nullptr, nullptr);
+
+                scgms::TDraw_Options opts;
+                refcnt::SVector_Container<uint64_t> segments;
+                refcnt::SVector_Container<GUID> signals;
+
+                get_drawing_opts(opts, insp, segments, signals);
+                std::cout << "\n=== SVG #" << plot_index << " (name: " << Narrow_WString(it->name)
+                        << ", guid: " << Narrow_WString(GUID_To_WString(it->id)) << ") ===\n";
+                HRESULT res = insp->Draw(&it->id, svg.get(), &opts);
+                if (Succeeded(res)) {
+                    auto svg_str = refcnt::Char_Container_To_String(svg.get());
+                    std::cout << svg_str << "\n";
+                    SvgInfo svg_info;
+                    svg_info.id = Narrow_WString(GUID_To_WString(it->id));
+                    svg_info.name = Narrow_WString(it->name);
+                    svg_info.svg_str = svg_str;
+                    svgs.push_back(svg_info);
+                } else {
+                    std::cout << "Failed to draw SVG, error description: " << Narrow_WChar(Describe_Error(res))
+                            <<
+                            std::endl;
+                }
+                ++plot_index;
+            }
+        }
+    }
+}
+void monitor_drawing_updates_loop() {
+    uint64_t previous_clock = 0;
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        std::lock_guard<std::mutex> lock(drawing_mutex);
+        if (!insp) continue;
+
+        ULONG current_clock;
+        if (insp->Logical_Clock(&current_clock) == S_OK) {
+            if (current_clock != previous_clock) {
+                previous_clock = current_clock;
+                std::cout << "[INFO] Clock updated: " << current_clock << "\n";
+                retrieve_drawings();  // nebo tvá aktualizační logika
+            }
+        }
+    }
+}
+
+std::string execute() {
+    svgs.clear();
+    refcnt::Swstr_list errors;
 
     // Execute the filter chain
     Global_Filter_Executor = scgms::SFilter_Executor{
@@ -671,7 +749,14 @@ std::string execute() {
     if (Global_Filter_Executor) {
         std::cout << "Filter chain execution started successfully." << std::endl;
         // Wait for execution to complete
-        Global_Filter_Executor->Terminate(FALSE);
+        int wait_ms = 0;
+
+        if (insp) {
+            std::thread monitor_thread(monitor_drawing_updates_loop);
+            monitor_thread.detach();
+        }
+        Global_Filter_Executor->Terminate(TRUE);
+
 
         std::cout << "Filter chain execution completed." << std::endl;
     } else {
@@ -692,6 +777,8 @@ std::vector<SvgInfo> get_svgs() {
     std::cout << "SVGs available: " << svgs.size() << std::endl;
     return svgs;
 }
+
+
 
 /**
  * API
@@ -832,6 +919,7 @@ int main() {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
     }
+    update_output_filters_parameters();
     execute();
     return 0;
 }

@@ -11,7 +11,7 @@ import {
     saveConfiguration,
     loadConfiguration,
     fetchChainFilters,
-    executeConfiguration, fetchSvgs
+    executeConfiguration, fetchSvgs, initConfiguration
 } from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
@@ -65,9 +65,14 @@ function MainPage() {
         });
         fetchChainFilters().then(fetchedFilters => {
             console.log("Fetched Chain filters:", fetchedFilters);
-                if (fetchedFilters) {
+                if (fetchedFilters.length > 0) {
                     const updated = updateFilterIndexes(fetchedFilters);
                     setSelectedFilters(updated);
+                }
+                else {
+                    initConfiguration().then(data => {
+                        console.log("Configuration initialized.");
+                    })
                 }
             }
         );
