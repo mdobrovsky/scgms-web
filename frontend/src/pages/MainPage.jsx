@@ -63,6 +63,14 @@ function MainPage() {
             console.log("Fetched Metrics:", data);
             setMetrics(data);
         });
+        fetchChainFilters().then(fetchedFilters => {
+            console.log("Fetched Chain filters:", fetchedFilters);
+                if (fetchedFilters) {
+                    const updated = updateFilterIndexes(fetchedFilters);
+                    setSelectedFilters(updated);
+                }
+            }
+        );
 
     }, []);
 

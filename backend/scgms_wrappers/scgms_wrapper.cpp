@@ -105,11 +105,18 @@ struct SvgInfo {
 
 std::vector<SvgInfo> svgs;
 
+
 MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
     MetricInfo metric;
     metric.id = Narrow_WString(GUID_To_WString(desc.id));
     metric.description = Narrow_WString(desc.description);
     return metric;
+}
+
+std::string reset_configuration() {
+    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    svgs.clear();
+    return "0";
 }
 
 SolverInfo convert_solver_descriptor(const scgms::TSolver_Descriptor &desc) {
@@ -567,7 +574,7 @@ void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, 
 std::vector<FilterInfo> get_available_filters() {
     const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
     std::vector<FilterInfo> filters;
-    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    // chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
 
 
     // Iterate through all filters
@@ -702,9 +709,12 @@ std::string load_scgms_lib() {
             return "1";
         }
     }
-
     std::cout << "SCGMS library loaded successfully." << std::endl;
     return "0";
+}
+
+void init_config() {
+    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
 }
 
 /**
@@ -722,6 +732,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.doc() = "SCGMS Python module"; // optional module docstring
     m.def("add_one", &add_one, "A function that adds 1 to a number (dummy func)");
     m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
+    m.def("init_config", &init_config, "Initializes the configuration");
     m.def("add_filter", &add_filter, "Adds a filter to the configuration");
     m.def("save_configuration", &save_configuration, "Saves the configuration to a file");
     m.def("load_configuration", &load_configuration, "Loads the configuration from a file");
@@ -730,6 +741,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("remove_filter", &remove_filter, "Removes a filter from the configuration");
     m.def("move_filter_up", &move_filter_up, "Moves a filter up in the configuration");
     m.def("move_filter_down", &move_filter_down, "Moves a filter down in the configuration");
+    m.def("reset_configuration", &reset_configuration, "Resets the configuration");
     m.def("execute", &execute, "Executes the filter chain");
     // Expose structures for working with filters
     namespace py = pybind11;

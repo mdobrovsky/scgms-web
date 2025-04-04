@@ -2,6 +2,10 @@ import scgms_wrapper
 
 from services.filter_service import filter_info_to_dict
 
+def init_service():
+    scgms_wrapper.init_config()
+    return "0"
+
 def svg_info_to_dict(svg):
     return {
         "id": svg.id,
