@@ -250,7 +250,7 @@ function MainPage() {
                 </Container>
             )}
             {activeTab === "simulation" && (
-                <SimulationPage handleStartButton={handleStartButton} />
+                <SimulationPage handleStartButton={handleStartButton} svgs={svgs}/>
             )}
 
             {selectedFilter && (
