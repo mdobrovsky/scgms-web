@@ -605,17 +605,18 @@ std::vector<FilterInfo> get_chain_filters() {
 
 int update_output_filters_parameters() {
     chain_configuration.for_each([](scgms::SFilter_Configuration_Link link) mutable {
+        std::cout << "[CHAIN] Filter ID: " << Narrow_WChar(link.descriptor().description) << std::endl;
         if (IsEqualGUID(link.descriptor().id, scgms::IID_Drawing_Filter_v2)) {
             scgms::SFilter_Parameter width_p = link.Resolve_Parameter(link.descriptor().config_parameter_name[0]);
             std::string w_value = get_parameter_value(width_p);
             drawing_v2_width = w_value.empty()
-            ? 800
-            : std::stoi(w_value);
+                                   ? 800
+                                   : std::stoi(w_value);
             scgms::SFilter_Parameter height_p = link.Resolve_Parameter(link.descriptor().config_parameter_name[1]);
             std::string h_value = get_parameter_value(height_p);
             drawing_v2_height = h_value.empty()
-            ? 600
-            : std::stoi(h_value);
+                                    ? 600
+                                    : std::stoi(h_value);
             std::cout << "Drawing filter width: " << drawing_v2_width << std::endl;
             std::cout << "Drawing filter height: " << drawing_v2_height << std::endl;
         }
@@ -624,18 +625,21 @@ int update_output_filters_parameters() {
 }
 
 
-
 HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *data) {
     if (!filter) {
-        std::wcerr << L"Error: Filter creation failed!" << std::endl;
+        std::wcerr << L"[CALLBACK] Error: Filter creation failed!" << std::endl;
         return E_FAIL;
     }
 
-    if (scgms::SDrawing_Filter_Inspection_v2 insp_v2 = scgms::SDrawing_Filter_Inspection_v2{ scgms::SFilter{filter} }) {
+    std::wcout << L"[CALLBACK] Filter created, testing for drawing..." << std::endl;
+
+    if (scgms::SDrawing_Filter_Inspection_v2 insp_v2 = scgms::SDrawing_Filter_Inspection_v2{scgms::SFilter{filter}}) {
         std::lock_guard<std::mutex> lock(drawing_mutex);
         insp = insp_v2;
+        std::wcout << L"[CALLBACK] Drawing filter recognized and stored." << std::endl;
+    } else {
+        std::wcout << L"[CALLBACK] Not a drawing filter, skipped." << std::endl;
     }
-
 
     return S_OK;
 }
@@ -644,8 +648,8 @@ HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *da
 void get_drawing_opts(
     scgms::TDraw_Options &opts,
     scgms::SDrawing_Filter_Inspection_v2 insp,
-    refcnt::SVector_Container<uint64_t>& segments,
-   refcnt::SVector_Container<GUID>& signals
+    refcnt::SVector_Container<uint64_t> &segments,
+    refcnt::SVector_Container<GUID> &signals
 ) {
     opts = {};
     opts.width = drawing_v2_width;
@@ -653,16 +657,16 @@ void get_drawing_opts(
 
     segments = refcnt::Create_Container_shared<uint64_t>(nullptr, nullptr);
     if (insp->Get_Available_Segments(segments.get()) == S_OK) {
-        uint64_t* seg_begin = nullptr;
-        uint64_t* seg_end = nullptr;
+        uint64_t *seg_begin = nullptr;
+        uint64_t *seg_end = nullptr;
         if (segments->get(&seg_begin, &seg_end) == S_OK && seg_begin != seg_end) {
             opts.segments = seg_begin;
             opts.segment_count = std::distance(seg_begin, seg_end);
 
             signals = refcnt::Create_Container_shared<GUID>(nullptr, nullptr);
             if (insp->Get_Available_Signals(*seg_begin, signals.get()) == S_OK) {
-                GUID* sig_begin = nullptr;
-                GUID* sig_end = nullptr;
+                GUID *sig_begin = nullptr;
+                GUID *sig_end = nullptr;
                 if (signals->get(&sig_begin, &sig_end) == S_OK && sig_begin != sig_end) {
                     opts.in_signals = sig_begin;
                     opts.reference_signals = sig_begin;
@@ -693,12 +697,12 @@ void retrieve_drawings() {
                 refcnt::SVector_Container<GUID> signals;
 
                 get_drawing_opts(opts, insp, segments, signals);
-                std::cout << "\n=== SVG #" << plot_index << " (name: " << Narrow_WString(it->name)
-                        << ", guid: " << Narrow_WString(GUID_To_WString(it->id)) << ") ===\n";
+                // std::cout << "\n=== SVG #" << plot_index << " (name: " << Narrow_WString(it->name)
+                //         << ", guid: " << Narrow_WString(GUID_To_WString(it->id)) << ") ===\n";
                 HRESULT res = insp->Draw(&it->id, svg.get(), &opts);
                 if (Succeeded(res)) {
                     auto svg_str = refcnt::Char_Container_To_String(svg.get());
-                    std::cout << svg_str << "\n";
+                    // std::cout << svg_str << "\n";
                     SvgInfo svg_info;
                     svg_info.id = Narrow_WString(GUID_To_WString(it->id));
                     svg_info.name = Narrow_WString(it->name);
@@ -714,6 +718,7 @@ void retrieve_drawings() {
         }
     }
 }
+
 void monitor_drawing_updates_loop() {
     uint64_t previous_clock = 0;
 
@@ -725,11 +730,14 @@ void monitor_drawing_updates_loop() {
 
         ULONG current_clock;
         if (insp->Logical_Clock(&current_clock) == S_OK) {
+            std::cout << "[DEBUG] Current logical clock: " << current_clock << std::endl;
             if (current_clock != previous_clock) {
                 previous_clock = current_clock;
                 std::cout << "[INFO] Clock updated: " << current_clock << "\n";
-                retrieve_drawings();  // nebo tvá aktualizační logika
+                retrieve_drawings();
             }
+        } else {
+            std::cerr << "[ERROR] Failed to get logical clock." << std::endl;
         }
     }
 }
@@ -748,15 +756,22 @@ std::string execute() {
 
     if (Global_Filter_Executor) {
         std::cout << "Filter chain execution started successfully." << std::endl;
-        // Wait for execution to complete
-        int wait_ms = 0;
 
         if (insp) {
+            std::cout << "[EXECUTE] Insp ready, launching monitor thread" << std::endl;
+            std::lock_guard<std::mutex> lock(drawing_mutex);
+            std::cout << "[EXECUTE] Calling retrieve_drawings() directly..." << std::endl;
+            retrieve_drawings();
             std::thread monitor_thread(monitor_drawing_updates_loop);
             monitor_thread.detach();
+        } else {
+            std::cout << "[EXECUTE] Insp not set! Drawing filter not detected." << std::endl;
         }
-        Global_Filter_Executor->Terminate(TRUE);
 
+        std::thread exec_thread([]() {
+            Global_Filter_Executor->Terminate(TRUE);
+        });
+        exec_thread.detach();
 
         std::cout << "Filter chain execution completed." << std::endl;
     } else {
@@ -777,7 +792,6 @@ std::vector<SvgInfo> get_svgs() {
     std::cout << "SVGs available: " << svgs.size() << std::endl;
     return svgs;
 }
-
 
 
 /**
@@ -921,6 +935,7 @@ int main() {
     }
     update_output_filters_parameters();
     execute();
+    
     return 0;
 }
 #endif

@@ -18,6 +18,7 @@ import {fetchMetrics} from "../services/metricService.jsx";
 import LoadConfigModal from "../components/LoadConfigModal.jsx";
 import {toast} from "react-toastify";
 import {updateFilterIndexes} from "../services/utils.jsx";
+import {SimulationPage} from "../components/SimulationPage.jsx";
 
 function MainPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
@@ -162,6 +163,7 @@ function MainPage() {
                         if (fetchedFilters) {
                             const updated = updateFilterIndexes(fetchedFilters);
                             setSelectedFilters(updated);
+                            setShowLoadModal(false)
                             resolve("Configuration loaded successfully");
                         } else {
                             reject(new Error("Error loading configuration"));
@@ -248,9 +250,7 @@ function MainPage() {
                 </Container>
             )}
             {activeTab === "simulation" && (
-                <Container>
-                    <Button variant="outline-dark" onClick={handleStartButton}>Start</Button>
-                </Container>
+                <SimulationPage handleStartButton={handleStartButton} />
             )}
 
             {selectedFilter && (
