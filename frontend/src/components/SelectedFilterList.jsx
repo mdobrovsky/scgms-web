@@ -57,7 +57,7 @@ const SelectedFilterList = ({
         setSelectedFilter(null);
     }
     return (
-        <Card className="p-3 mt-4 h-100" style={{height: "550px"}}>
+        <Card className="p-3 mt-4 h-100 shadow-sm" style={{height: "550px"}}>
 
             <Card.Title as="h3">Applied Filters</Card.Title>
             <ListGroup className="overflow-y-scroll" style={{height: "400px"}}>
