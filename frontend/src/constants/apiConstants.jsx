@@ -8,6 +8,7 @@ export const INIT_CONFIGURATION_URL = `${API_BASE_URL}/config/init`;
 export const SAVE_CONFIGURATION_URL = `${API_BASE_URL}/config/save`;
 export const LOAD_CONFIGURATION_URL = `${API_BASE_URL}/config/load`;
 export const EXECUTE_CONFIGURATION_URL = `${API_BASE_URL}/config/execute`;
+export const STOP_SIMULATION_URL = `${API_BASE_URL}/config/stop`;
 export const FETCH_SVGS_URL = `${API_BASE_URL}/config/fetch_svgs`;
 export const FETCH_CHAIN_FILTERS_URL = `${API_BASE_URL}/config/fetch_filters`;
 export const REMOVE_FILTER_URL = `${API_BASE_URL}/filters/remove`;

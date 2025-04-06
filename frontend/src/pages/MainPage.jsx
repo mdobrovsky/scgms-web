@@ -11,7 +11,7 @@ import {
     saveConfiguration,
     loadConfiguration,
     fetchChainFilters,
-    executeConfiguration, fetchSvgs, initConfiguration
+    executeConfiguration, fetchSvgs, initConfiguration, stopSimulation
 } from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
@@ -38,6 +38,8 @@ function MainPage() {
     const [file, setFile] = useState(null);
     const [svgs, setSvgs] = useState(null);
     const disableModelBoundsNav = selectedFilters.length === 0;
+    const [isStartDisabled, setIsStartDisabled] = useState(false);
+    const [isStopDisabled, setIsStopDisabled] = useState(true);
 
     useEffect(() => {
         fetchFilters().then(data => {
@@ -92,6 +94,8 @@ function MainPage() {
                         console.log("Fetched SVGs:", svgs);
                         if (svgs) {
                             setSvgs(svgs);
+                            setIsStartDisabled(true);
+                            setIsStopDisabled(false);
                             resolve("Simulation started successfully");
                         } else {
                             reject(new Error("Error starting simulation."));
@@ -106,6 +110,41 @@ function MainPage() {
             }),
             {
                 pending: "Starting simulation...",
+                success: {
+                    render({data}) {
+                        return data; // render success message
+                    },
+                    icon: "✅"
+                },
+                error: {
+                    render({data}) {
+                        return `Error: ${data?.message || "Unknown error"}`;
+                    }
+                }
+            }
+        )
+    }
+
+    const handleStopButton = async () => {
+        await toast.promise(
+            new Promise(async (resolve, reject) => {
+                try {
+                    const result = await stopSimulation();
+                    console.log("Stop simulation result:", result);
+                    if (result === "0") {
+                        setIsStartDisabled(false);
+                        setIsStopDisabled(true);
+                        resolve("Simulation stopped successfully");
+
+                    } else {
+                        reject(new Error("Error stopping simulation."));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            }),
+            {
+                pending: "Stopping simulation...",
                 success: {
                     render({data}) {
                         return data; // render success message
@@ -250,7 +289,8 @@ function MainPage() {
                 </Container>
             )}
             {activeTab === "simulation" && (
-                <SimulationPage handleStartButton={handleStartButton} svgs={svgs}/>
+                <SimulationPage handleStartButton={handleStartButton} handleStopButton={handleStopButton}
+                                isStartDisabled={isStartDisabled} isStopDisabled={isStopDisabled} svgs={svgs}/>
             )}
 
             {selectedFilter && (

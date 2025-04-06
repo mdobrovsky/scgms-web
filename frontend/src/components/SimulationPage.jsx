@@ -1,22 +1,47 @@
-import {Button, Container, Image} from "react-bootstrap";
+import {Button, Col, Container, Image, Row} from "react-bootstrap";
+import {SvgTabs} from "./SvgTabs.jsx";
+import PropTypes from "prop-types";
 
-export const SimulationPage = ({handleStartButton, svgs}) => {
+export const SimulationPage = ({handleStartButton, isStartDisabled, isStopDisabled, handleStopButton, svgs}) => {
     return (
-        <Container>
-            <Button variant="outline-dark" onClick={handleStartButton}>Start</Button>
-            {svgs && svgs.length > 0 && (
-                <div className="container my-4 p-5">
-                    {svgs.map((svg, index) => (
-                        <div
-                            key={index}
-                            className="text-center border p-5 bg-light shadow"
-                            dangerouslySetInnerHTML={{ __html: svg.svg_str }}
-                        />
-                    ))}
-                </div>
-            )}
+        <Container fluid className="my-4">
+            <Row>
+                <Col md={2}>
+                    <div className="d-flex flex-column gap-2">
+                        <Button variant="outline-dark" disabled={isStartDisabled} onClick={handleStartButton}>Start</Button>
+                        <Button variant="outline-dark" disabled={isStopDisabled} onClick={handleStopButton}>Stop</Button>
+                    </div>
+                </Col>
 
+                <Col md={8}>
+                    {svgs && svgs.length > 0 && <SvgTabs svgs={svgs} />}
+                </Col>
+
+                <Col md={2}>
+                    <div className="d-flex flex-column gap-2">
+                        <h5>Time segments</h5>
+                        <Button variant="outline-secondary">Example 1</Button>
+                        <Button variant="outline-secondary">Example 2</Button>
+                    </div>
+                    <div className="d-flex flex-column gap-2 mt-5">
+                        <h5>Signals</h5>
+                        <Button variant="outline-secondary">Example 1</Button>
+                        <Button variant="outline-secondary">Example 2</Button>
+                    </div>
+                </Col>
+            </Row>
         </Container>
     )
-
 }
+SimulationPage.propTypes = {
+    handleStartButton: PropTypes.func.isRequired,
+    handleStopButton: PropTypes.func.isRequired,
+    isStartDisabled: PropTypes.bool.isRequired,
+    isStopDisabled: PropTypes.bool.isRequired,
+    svgs: PropTypes.arrayOf(
+        PropTypes.shape({
+            name: PropTypes.string,
+            svg_str: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+};

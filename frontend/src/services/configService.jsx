@@ -4,7 +4,7 @@ import {
     FETCH_CHAIN_FILTERS_URL,
     FETCH_FILTERS_URL, FETCH_SVGS_URL, INIT_CONFIGURATION_URL,
     LOAD_CONFIGURATION_URL,
-    SAVE_CONFIGURATION_URL
+    SAVE_CONFIGURATION_URL, STOP_SIMULATION_URL
 } from "../constants/apiConstants.jsx";
 
 
@@ -24,6 +24,16 @@ export const executeConfiguration = async () => {
         return response.data.result;
     } catch (error) {
         console.error("Error executing configuration:", error);
+        return "1";
+    }
+}
+
+export const stopSimulation = async () => {
+    try {
+        const response = await axios.get(STOP_SIMULATION_URL);
+        return response.data.result;
+    } catch (error) {
+        console.error("Error stopping simulation:", error);
         return "1";
     }
 }
