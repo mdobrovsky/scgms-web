@@ -30,5 +30,14 @@ def get_svgs_service():
     svgs = list(scgms_wrapper.get_svgs())
     return [svg_info_to_dict(svg) for svg in svgs]
 
+def get_logs_service():
+    # f = io.StringIO(csv_string)
+    # reader = csv.DictReader(f)
+    logs = list(scgms_wrapper.get_logs())
+    return logs
+
 def execute_service():
     return scgms_wrapper.execute()
+
+def stop_service():
+    return scgms_wrapper.stop_simulation()

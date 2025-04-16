@@ -10,6 +10,7 @@ export const LOAD_CONFIGURATION_URL = `${API_BASE_URL}/config/load`;
 export const EXECUTE_CONFIGURATION_URL = `${API_BASE_URL}/config/execute`;
 export const STOP_SIMULATION_URL = `${API_BASE_URL}/config/stop`;
 export const FETCH_SVGS_URL = `${API_BASE_URL}/config/fetch_svgs`;
+export const FETCH_LOGS_URL = `${API_BASE_URL}/config/fetch_logs`;
 export const FETCH_CHAIN_FILTERS_URL = `${API_BASE_URL}/config/fetch_filters`;
 export const REMOVE_FILTER_URL = `${API_BASE_URL}/filters/remove`;
 export const MOVE_FILTER_UP_URL = `${API_BASE_URL}/filters/move_up`;

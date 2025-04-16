@@ -34,10 +34,15 @@ solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so t
 scgms::SFilter_Executor Global_Filter_Executor;
 
 scgms::SPersistent_Filter_Chain_Configuration chain_configuration;
-scgms::SDrawing_Filter_Inspection_v2 insp;
+scgms::SDrawing_Filter_Inspection_v2 insp_draw;
+scgms::SLog_Filter_Inspection insp_log;
 int drawing_v2_width;
 int drawing_v2_height;
 std::mutex drawing_mutex;
+std::thread monitor_thread;
+std::atomic<bool> stop_monitor_thread{false};
+std::vector<std::string> log_lines;
+
 
 // structures for filter info
 struct FilterParameter {
@@ -635,8 +640,11 @@ HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *da
 
     if (scgms::SDrawing_Filter_Inspection_v2 insp_v2 = scgms::SDrawing_Filter_Inspection_v2{scgms::SFilter{filter}}) {
         std::lock_guard<std::mutex> lock(drawing_mutex);
-        insp = insp_v2;
+        insp_draw = insp_v2;
         std::wcout << L"[CALLBACK] Drawing filter recognized and stored." << std::endl;
+    } else if (scgms::SLog_Filter_Inspection temp_insp_log = scgms::SLog_Filter_Inspection{scgms::SFilter{filter}}) {
+        insp_log = temp_insp_log;
+        std::wcout << L"[CALLBACK] Log filter recognized and stored." << std::endl;
     } else {
         std::wcout << L"[CALLBACK] Not a drawing filter, skipped." << std::endl;
     }
@@ -651,6 +659,8 @@ void get_drawing_opts(
     refcnt::SVector_Container<uint64_t> &segments,
     refcnt::SVector_Container<GUID> &signals
 ) {
+    // std::lock_guard<std::mutex> lock(drawing_mutex);
+
     opts = {};
     opts.width = drawing_v2_width;
     opts.height = drawing_v2_height;
@@ -659,7 +669,8 @@ void get_drawing_opts(
     if (insp->Get_Available_Segments(segments.get()) == S_OK) {
         uint64_t *seg_begin = nullptr;
         uint64_t *seg_end = nullptr;
-        if (segments->get(&seg_begin, &seg_end) == S_OK && seg_begin != seg_end) {
+
+        if (segments->get(&seg_begin, &seg_end) == S_OK && seg_begin != nullptr && seg_begin != seg_end) {
             opts.segments = seg_begin;
             opts.segment_count = std::distance(seg_begin, seg_end);
 
@@ -667,7 +678,7 @@ void get_drawing_opts(
             if (insp->Get_Available_Signals(*seg_begin, signals.get()) == S_OK) {
                 GUID *sig_begin = nullptr;
                 GUID *sig_end = nullptr;
-                if (signals->get(&sig_begin, &sig_end) == S_OK && sig_begin != sig_end) {
+                if (signals->get(&sig_begin, &sig_end) == S_OK && sig_begin != nullptr && sig_begin != sig_end) {
                     opts.in_signals = sig_begin;
                     opts.reference_signals = sig_begin;
                     opts.signal_count = std::distance(sig_begin, sig_end);
@@ -679,9 +690,10 @@ void get_drawing_opts(
 
 
 void retrieve_drawings() {
+    svgs.clear();
     auto caps = refcnt::Create_Container_shared<scgms::TPlot_Descriptor>(nullptr, nullptr);
 
-    if (insp->Get_Capabilities(caps.get()) == S_OK && caps->empty() != S_OK) {
+    if (insp_draw->Get_Capabilities(caps.get()) == S_OK && caps->empty() != S_OK) {
         scgms::TPlot_Descriptor *begin = nullptr;
         scgms::TPlot_Descriptor *end = nullptr;
 
@@ -696,10 +708,10 @@ void retrieve_drawings() {
                 refcnt::SVector_Container<uint64_t> segments;
                 refcnt::SVector_Container<GUID> signals;
 
-                get_drawing_opts(opts, insp, segments, signals);
+                get_drawing_opts(opts, insp_draw, segments, signals);
                 // std::cout << "\n=== SVG #" << plot_index << " (name: " << Narrow_WString(it->name)
                 //         << ", guid: " << Narrow_WString(GUID_To_WString(it->id)) << ") ===\n";
-                HRESULT res = insp->Draw(&it->id, svg.get(), &opts);
+                HRESULT res = insp_draw->Draw(&it->id, svg.get(), &opts);
                 if (Succeeded(res)) {
                     auto svg_str = refcnt::Char_Container_To_String(svg.get());
                     // std::cout << svg_str << "\n";
@@ -719,25 +731,53 @@ void retrieve_drawings() {
     }
 }
 
+void retrieve_logs() {
+    std::shared_ptr<refcnt::wstr_list> lines;
+    while (insp_log.pop(lines)) {
+        refcnt::wstr_container **begin, **end;
+        if (lines) {
+            if (lines->get(&begin, &end) == S_OK) {
+                for (auto iter = begin; iter != end; iter++) {
+                    log_lines.push_back(Narrow_WString(WChar_Container_To_WString(*iter)));
+                    // std::cout << Narrow_WString(WChar_Container_To_WString(*iter)) << std::endl;
+                }
+            }
+        }
+    }
+}
+
 void monitor_drawing_updates_loop() {
     uint64_t previous_clock = 0;
 
     while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (stop_monitor_thread.load()) {
+            std::cout << "[MONITOR] Stop flag detected, exiting loop." << std::endl;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1)); {
+            std::lock_guard<std::mutex> lock(drawing_mutex);
 
-        std::lock_guard<std::mutex> lock(drawing_mutex);
-        if (!insp) continue;
-
-        ULONG current_clock;
-        if (insp->Logical_Clock(&current_clock) == S_OK) {
-            std::cout << "[DEBUG] Current logical clock: " << current_clock << std::endl;
-            if (current_clock != previous_clock) {
-                previous_clock = current_clock;
-                std::cout << "[INFO] Clock updated: " << current_clock << "\n";
-                retrieve_drawings();
+            // std::cout << "[DEBUG] global executor status: " << !Global_Filter_Executor << std::endl;
+            if (!Global_Filter_Executor) {
+                std::cout << "[DEBUG] Global executor is not set, exiting monitor thread." << std::endl;
+                break;
             }
-        } else {
-            std::cerr << "[ERROR] Failed to get logical clock." << std::endl;
+            if (insp_draw) {
+                ULONG current_clock;
+                if (insp_draw->Logical_Clock(&current_clock) == S_OK) {
+                    std::cout << "[DEBUG] Current logical clock: " << current_clock << std::endl;
+                    if (current_clock != previous_clock) {
+                        previous_clock = current_clock;
+                        std::cout << "[INFO] Clock updated: " << current_clock << "\n";
+                        retrieve_drawings();
+                    }
+                } else {
+                    std::cerr << "[ERROR] Failed to get logical clock." << std::endl;
+                }
+            }
+            if (insp_log) {
+                retrieve_logs();
+            }
         }
     }
 }
@@ -745,6 +785,9 @@ void monitor_drawing_updates_loop() {
 std::string execute() {
     svgs.clear();
     refcnt::Swstr_list errors;
+    if (Global_Filter_Executor) {
+        return "0";
+    }
 
     // Execute the filter chain
     Global_Filter_Executor = scgms::SFilter_Executor{
@@ -755,27 +798,33 @@ std::string execute() {
     };
 
     if (Global_Filter_Executor) {
-        std::cout << "Filter chain execution started successfully." << std::endl;
+        std::cout << "[EXECUTE] Filter chain execution started successfully." << std::endl;
 
-        if (insp) {
-            std::cout << "[EXECUTE] Insp ready, launching monitor thread" << std::endl;
+        if (insp_draw) {
             std::lock_guard<std::mutex> lock(drawing_mutex);
             std::cout << "[EXECUTE] Calling retrieve_drawings() directly..." << std::endl;
             retrieve_drawings();
-            std::thread monitor_thread(monitor_drawing_updates_loop);
-            monitor_thread.detach();
-        } else {
+
+        }
+        if (insp_log) {
+            std::cout << "[EXECUTE] Calling retrieve_logs() directly..." << std::endl;
+            retrieve_logs();
+        }
+        if (insp_draw || insp_log) {
+            std::cout << "[EXECUTE] Starting monitor thread..." << std::endl;
+            stop_monitor_thread.store(false);
+
+            monitor_thread = std::thread(monitor_drawing_updates_loop);
+            std::cout << "[EXECUTE] Monitor thread started." << std::endl;
+        }
+        else {
             std::cout << "[EXECUTE] Insp not set! Drawing filter not detected." << std::endl;
         }
 
-        std::thread exec_thread([]() {
-            Global_Filter_Executor->Terminate(TRUE);
-        });
-        exec_thread.detach();
 
-        std::cout << "Filter chain execution completed." << std::endl;
+        std::cout << "[EXECUTE] Filter chain execution completed." << std::endl;
     } else {
-        std::wcerr << L"Failed to create filter executor." << std::endl;
+        std::wcerr << L"[EXECUTE] Failed to create filter executor." << std::endl;
         errors.for_each([](const std::wstring &str) {
             std::wcerr << str << std::endl;
         });
@@ -791,6 +840,14 @@ std::vector<SvgInfo> get_svgs() {
     }
     std::cout << "SVGs available: " << svgs.size() << std::endl;
     return svgs;
+}
+
+std::vector<std::string> get_logs() {
+    if (log_lines.empty()) {
+        std::cerr << "No log lines available." << std::endl;
+        return {};
+    }
+    return log_lines;
 }
 
 
@@ -818,6 +875,41 @@ void init_config() {
     chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
 }
 
+void inject_event(const scgms::NDevice_Event_Code &code, const GUID &signal_id, const wchar_t *info,
+                  const uint64_t segment_id) {
+    if (Global_Filter_Executor) {
+        scgms::UDevice_Event evt{code};
+        evt.signal_id() = signal_id;
+        evt.segment_id() = segment_id;
+        evt.info.set(info);
+        Global_Filter_Executor.Execute(std::move(evt));
+    }
+}
+
+std::string stop_simulation() {
+    stop_monitor_thread.store(true);
+    std::cout << "Stopping monitor thread..." << std::endl;
+    if (monitor_thread.joinable()) {
+        std::cout << "[STOP] Waiting for monitor thread to finish..." << std::endl;
+        monitor_thread.join();
+        std::cout << "[STOP] Monitor thread joined successfully." << std::endl;
+    }
+    insp_draw = {};
+    insp_log = {};
+    log_lines = {};
+    svgs = {};
+    inject_event(scgms::NDevice_Event_Code::Shut_Down, Invalid_GUID, nullptr, 0);
+    HRESULT hr = Global_Filter_Executor->Terminate(TRUE);
+    if (!Succeeded(hr)) {
+        std::cerr << "Failed to terminate filter executor: " << Narrow_WChar(Describe_Error(hr)) << std::endl;
+        return "1";
+    }
+
+    std::cout << "Filter executor terminated successfully." << std::endl;
+    Global_Filter_Executor = {};
+    return "0";
+}
+
 /**
  * dummy API
  * @param number
@@ -825,6 +917,22 @@ void init_config() {
  */
 int add_one(int number) {
     return number + 1;
+}
+
+void print_filter_info(std::vector<FilterInfo> filters) {
+    for (const auto &filter: filters) {
+        std::cout << "Filter ID: " << filter.id << std::endl;
+        std::cout << "Filter Flags: " << filter.flags << std::endl;
+        std::cout << "Filter Description: " << filter.description << std::endl;
+        std::cout << "Filter Parameters Count: " << filter.parameters_count << std::endl;
+        for (const auto &param: filter.parameters) {
+            std::cout << "Parameter Type: " << param.parameter_type << std::endl;
+            std::cout << "UI Parameter Name: " << param.ui_parameter_name << std::endl;
+            std::cout << "Config Parameter Name: " << param.config_parameter_name << std::endl;
+            std::cout << "UI Parameter Tooltip: " << param.ui_parameter_tooltip << std::endl;
+            std::cout << "Default Value: " << param.default_value << std::endl;
+        }
+    }
 }
 
 PYBIND11_MAKE_OPAQUE(std::vector<FilterInfo>);
@@ -844,6 +952,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("move_filter_down", &move_filter_down, "Moves a filter down in the configuration");
     m.def("reset_configuration", &reset_configuration, "Resets the configuration");
     m.def("execute", &execute, "Executes the filter chain");
+    m.def("stop_simulation", &stop_simulation, "Stops the simulation");
     // Expose structures for working with filters
     namespace py = pybind11;
     py::class_<FilterParameter>(m, "FilterParameter")
@@ -924,17 +1033,73 @@ PYBIND11_MODULE(scgms_wrapper, m) {
             .def_readonly("svg_str", &SvgInfo::svg_str);
     py::bind_vector<std::vector<SvgInfo> >(m, "SvgInfoVector");
     m.def("get_svgs", &get_svgs, "Returns SVGs from the filter chain");
+    m.def("get_logs", &get_logs, "Returns log lines from the filter chain");
+}
+
+bool are_filter_vectors_contents_equal(const std::vector<FilterInfo> &a, const std::vector<FilterInfo> &b) {
+    if (a.size() != b.size()) {
+        std::cout << "Filter vectors size mismatch: "
+                << a.size() << " vs " << b.size() << std::endl;
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].id != b[i].id || a[i].flags != b[i].flags || a[i].description != b[i].description ||
+            a[i].parameters_count != b[i].parameters_count) {
+            std::cout << "Filter " << i << " mismatch: "
+                    << a[i].id << " vs " << b[i].id << std::endl;
+            return false;
+        }
+        for (size_t j = 0; j < a[i].parameters_count; ++j) {
+            if (a[i].parameters[j].parameter_type != b[i].parameters[j].parameter_type ||
+                a[i].parameters[j].ui_parameter_name != b[i].parameters[j].ui_parameter_name ||
+                a[i].parameters[j].config_parameter_name != b[i].parameters[j].config_parameter_name ||
+                a[i].parameters[j].ui_parameter_tooltip != b[i].parameters[j].ui_parameter_tooltip ||
+                a[i].parameters[j].default_value != b[i].parameters[j].default_value) {
+                std::cout << "Filter " << i << " parameter " << j << " mismatch: "
+                        << a[i].parameters[j].parameter_type << " vs "
+                        << b[i].parameters[j].parameter_type << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool are_svgs_equal(const std::vector<SvgInfo> &a, const std::vector<SvgInfo> &b) {
+    if (a.size() != b.size()) {
+        std::cout << "SVG vectors size mismatch: "
+                << a.size() << " vs " << b.size() << std::endl;
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].id != b[i].id || a[i].name != b[i].name || a[i].svg_str != b[i].svg_str) {
+            std::cout << "SVG " << i << " mismatch: "
+                    << a[i].id << " vs " << b[i].id << std::endl;
+            std::cout << "SVG A str: " << a[i].svg_str << std::endl;
+            std::cout << "SVG B str: " << b[i].svg_str << std::endl;
+            return false;
+        }
+    }
+    return true;
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
 int main() {
-    HRESULT res = chain_configuration->Load_From_File(L"../new_conf.ini", nullptr);
+    HRESULT res = chain_configuration->Load_From_File(L"../with_log.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
     }
     update_output_filters_parameters();
     execute();
+
+
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
+    stop_simulation();
+    std::cout << "Simulation stopped." << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+
 
     return 0;
 }

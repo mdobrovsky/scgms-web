@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import {Container, Row, Col, Nav, Dropdown, Modal, Form, Button} from "react-bootstrap";
 import AvailableFilterList from "../components/AvailableFilterList.jsx";
 import FilterConfigModal from "../components/FilterConfigModal";
@@ -11,7 +11,7 @@ import {
     saveConfiguration,
     loadConfiguration,
     fetchChainFilters,
-    executeConfiguration, fetchSvgs, initConfiguration, stopSimulation
+    executeConfiguration, fetchSvgs, initConfiguration, stopSimulation, fetchLogs
 } from "../services/configService.jsx";
 import SelectedFilterList from "../components/SelectedFilterList.jsx";
 import {fetchMetrics} from "../services/metricService.jsx";
@@ -36,10 +36,19 @@ function MainPage() {
     const [fileNameError, setFileNameError] = useState("");
     const [activeTab, setActiveTab] = useState("configuration");
     const [file, setFile] = useState(null);
-    const [svgs, setSvgs] = useState(null);
+    const [svgs, setSvgs] = useState([]);
+    const [logs, setLogs] = useState([]);
     const disableModelBoundsNav = selectedFilters.length === 0;
     const [isStartDisabled, setIsStartDisabled] = useState(false);
     const [isStopDisabled, setIsStopDisabled] = useState(true);
+    const [logIntervalId, setLogIntervalId] = useState(null);
+    const logsRef = useRef(null);
+
+    useEffect(() => {
+        logsRef.current = logs;
+    }, [logs]);
+
+
 
     useEffect(() => {
         fetchFilters().then(data => {
@@ -67,12 +76,11 @@ function MainPage() {
             setMetrics(data);
         });
         fetchChainFilters().then(fetchedFilters => {
-            console.log("Fetched Chain filters:", fetchedFilters);
+                console.log("Fetched Chain filters:", fetchedFilters);
                 if (fetchedFilters.length > 0) {
                     const updated = updateFilterIndexes(fetchedFilters);
                     setSelectedFilters(updated);
-                }
-                else {
+                } else {
                     initConfiguration().then(data => {
                         console.log("Configuration initialized.");
                     })
@@ -81,6 +89,10 @@ function MainPage() {
         );
 
     }, []);
+
+    // fetch logs in loop after start simulation
+
+
 
 
     const handleStartButton = async () => {
@@ -96,10 +108,57 @@ function MainPage() {
                             setSvgs(svgs);
                             setIsStartDisabled(true);
                             setIsStopDisabled(false);
-                            resolve("Simulation started successfully");
                         } else {
                             reject(new Error("Error starting simulation."));
                         }
+                        // const logs = await fetchLogs();
+                        // console.log("Fetched Logs:", logs);
+                        // if (logs) {
+                        //     setLogs(logs);
+                        // } else {
+                        //     reject(new Error("Error fetching logs."));
+                        // }
+                        const logs = await fetchLogs();
+                        if (logs) {
+                            setLogs(logs);
+                        } else {
+                            reject(new Error("Error fetching logs."));
+                        }
+
+                        const intervalId = setInterval(async () => {
+                            try {
+                                const new_logs = await fetchLogs();
+
+                                if (!new_logs) return;
+
+                                let areSame = true;
+                                const currentLogs = logsRef.current;
+
+                                if (currentLogs?.length !== new_logs.length) {
+                                    console.log(`Logs length differs: old=${currentLogs?.length}, new=${new_logs.length}`);
+                                    areSame = false;
+                                } else {
+                                    for (let i = 0; i < new_logs.length; i++) {
+                                        if (new_logs[i] !== currentLogs[i]) {
+                                            console.log(`Log at index ${i} differs:\n  old: '${currentLogs[i]}'\n  new: '${new_logs[i]}'`);
+                                            areSame = false;
+                                        }
+                                    }
+                                }
+
+                                if (!areSame) {
+                                    setLogs(new_logs);
+                                    console.log("Updated logs:", new_logs);
+                                }
+                            } catch (err) {
+                                console.error("Error while fetching logs:", err);
+                            }
+                        }, 3000);
+
+                        setLogIntervalId(intervalId);
+
+                        resolve("Simulation started successfully");
+
 
                     } else {
                         reject(new Error("Error starting simulation."));
@@ -132,6 +191,10 @@ function MainPage() {
                     const result = await stopSimulation();
                     console.log("Stop simulation result:", result);
                     if (result === "0") {
+                        if (logIntervalId) {
+                            clearInterval(logIntervalId);
+                            setLogIntervalId(null);
+                        }
                         setIsStartDisabled(false);
                         setIsStopDisabled(true);
                         resolve("Simulation stopped successfully");
@@ -180,12 +243,15 @@ function MainPage() {
     }
 
     const handleRemoveFilter = async (filter) => {
-        // console.log("Removing filter:", filter);
+        console.log("Removing filter:", filter);
         // send index instead of filter object
         const result = await removeFilter(selectedFilters.indexOf(filter));
+        console.log("Remove filter result:", result);
+
         if (result === "0") {
-            setSelectedFilters(selectedFilters.filter(f => f.id !== filter.id));
-            const updated = updateFilterIndexes([...selectedFilters, filter]);
+            const updated = updateFilterIndexes(
+                selectedFilters.filter(f => f.id !== filter.id)
+            );
             setSelectedFilters(updated);
 
         }
@@ -290,7 +356,8 @@ function MainPage() {
             )}
             {activeTab === "simulation" && (
                 <SimulationPage handleStartButton={handleStartButton} handleStopButton={handleStopButton}
-                                isStartDisabled={isStartDisabled} isStopDisabled={isStopDisabled} svgs={svgs}/>
+                                isStartDisabled={isStartDisabled} isStopDisabled={isStopDisabled} svgs={svgs}
+                                logs={logs}/>
             )}
 
             {selectedFilter && (

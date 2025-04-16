@@ -2,7 +2,7 @@ import axios from "axios";
 import {
     EXECUTE_CONFIGURATION_URL,
     FETCH_CHAIN_FILTERS_URL,
-    FETCH_FILTERS_URL, FETCH_SVGS_URL, INIT_CONFIGURATION_URL,
+    FETCH_FILTERS_URL, FETCH_LOGS_URL, FETCH_SVGS_URL, INIT_CONFIGURATION_URL,
     LOAD_CONFIGURATION_URL,
     SAVE_CONFIGURATION_URL, STOP_SIMULATION_URL
 } from "../constants/apiConstants.jsx";
@@ -46,7 +46,16 @@ export const fetchSvgs = async () => {
         console.error("Error fetching svgs:", error);
         return [];
     }
+}
 
+export const fetchLogs = async () => {
+    try{
+        const response = await axios.get(FETCH_LOGS_URL);
+        return response.data.logs;
+    } catch (error) {
+        console.error("Error fetching logs:", error);
+        return [];
+    }
 }
 export const saveConfiguration = async (configFileName) => {
     try {

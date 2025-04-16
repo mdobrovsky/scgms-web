@@ -1,8 +1,8 @@
 import {Button, Col, Container, Image, Row} from "react-bootstrap";
-import {SvgTabs} from "./SvgTabs.jsx";
+import {SimulationTabs} from "./SimulationTabs.jsx";
 import PropTypes from "prop-types";
 
-export const SimulationPage = ({handleStartButton, isStartDisabled, isStopDisabled, handleStopButton, svgs}) => {
+export const SimulationPage = ({handleStartButton, isStartDisabled, isStopDisabled, handleStopButton, svgs, logs}) => {
     return (
         <Container fluid className="my-4">
             <Row>
@@ -14,7 +14,7 @@ export const SimulationPage = ({handleStartButton, isStartDisabled, isStopDisabl
                 </Col>
 
                 <Col md={8}>
-                    {svgs && svgs.length > 0 && <SvgTabs svgs={svgs} />}
+                    <SimulationTabs svgs={svgs} logs={logs} />
                 </Col>
 
                 <Col md={2}>
@@ -44,4 +44,5 @@ SimulationPage.propTypes = {
             svg_str: PropTypes.string.isRequired,
         })
     ).isRequired,
+    logs: PropTypes.arrayOf(PropTypes.string).isRequired,
 };
