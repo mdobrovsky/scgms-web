@@ -108,6 +108,8 @@ function MainPage() {
 
 
     const handleStartButton = async () => {
+        setLogs([]);
+        setSvgs([]);
         await toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
