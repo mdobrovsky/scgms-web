@@ -219,6 +219,7 @@ std::string save_configuration(std::string &path) {
 
 std::string load_configuration(std::string &path) {
     refcnt::Swstr_list errors;
+    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
 
     HRESULT res = chain_configuration->Load_From_File(Widen_String(path).c_str(), errors.get());
     errors.for_each([](const std::wstring &str) {
@@ -791,7 +792,7 @@ void monitor_drawing_updates_loop() {
             }
             if (insp_draw) {
                 // retrieve_drawings();
-                
+
                 if (insp_draw->Logical_Clock(&current_clock) == S_OK) {
 
                     std::cout << "[DEBUG] Current logical clock: " << current_clock << std::endl;
