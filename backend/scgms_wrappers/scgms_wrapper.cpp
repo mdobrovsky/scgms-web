@@ -42,6 +42,7 @@ std::mutex drawing_mutex;
 std::thread monitor_thread;
 std::atomic<bool> stop_monitor_thread{false};
 std::vector<std::string> log_lines;
+ULONG current_clock = 0;
 
 
 // structures for filter info
@@ -731,6 +732,32 @@ void retrieve_drawings() {
     }
 }
 
+std::vector<SvgInfo> get_svgs() {
+    if (svgs.empty()) {
+        std::cerr << "No SVGs available." << std::endl;
+        return {};
+    }
+    std::cout << "SVGs available: " << svgs.size() << std::endl;
+    return svgs;
+}
+
+std::vector<std::string> get_logs() {
+    if (log_lines.empty()) {
+        std::cerr << "No log lines available." << std::endl;
+        return {};
+    }
+    return log_lines;
+}
+void log_svgs_to_console() {
+    std::cout << "SVGs:" << std::endl;
+    auto svgs = get_svgs();
+    for (const auto &svg: svgs) {
+        std::cout << "SVG ID: " << svg.id << std::endl;
+        std::cout << "SVG Name: " << svg.name << std::endl;
+        std::cout << "SVG String: " << svg.svg_str << std::endl;
+    }
+}
+
 void retrieve_logs() {
     std::shared_ptr<refcnt::wstr_list> lines;
     while (insp_log.pop(lines)) {
@@ -763,8 +790,10 @@ void monitor_drawing_updates_loop() {
                 break;
             }
             if (insp_draw) {
-                ULONG current_clock;
+                // retrieve_drawings();
+                
                 if (insp_draw->Logical_Clock(&current_clock) == S_OK) {
+
                     std::cout << "[DEBUG] Current logical clock: " << current_clock << std::endl;
                     if (current_clock != previous_clock) {
                         previous_clock = current_clock;
@@ -783,7 +812,8 @@ void monitor_drawing_updates_loop() {
 }
 
 std::string execute() {
-    svgs.clear();
+    log_lines = {};
+    svgs = {};
     refcnt::Swstr_list errors;
     if (Global_Filter_Executor) {
         return "0";
@@ -799,7 +829,7 @@ std::string execute() {
 
     if (Global_Filter_Executor) {
         std::cout << "[EXECUTE] Filter chain execution started successfully." << std::endl;
-
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         if (insp_draw) {
             std::lock_guard<std::mutex> lock(drawing_mutex);
             std::cout << "[EXECUTE] Calling retrieve_drawings() directly..." << std::endl;
@@ -833,22 +863,6 @@ std::string execute() {
     return "0";
 }
 
-std::vector<SvgInfo> get_svgs() {
-    if (svgs.empty()) {
-        std::cerr << "No SVGs available." << std::endl;
-        return {};
-    }
-    std::cout << "SVGs available: " << svgs.size() << std::endl;
-    return svgs;
-}
-
-std::vector<std::string> get_logs() {
-    if (log_lines.empty()) {
-        std::cerr << "No log lines available." << std::endl;
-        return {};
-    }
-    return log_lines;
-}
 
 
 /**
@@ -896,8 +910,8 @@ std::string stop_simulation() {
     }
     insp_draw = {};
     insp_log = {};
-    log_lines = {};
-    svgs = {};
+    current_clock = 0;
+
     inject_event(scgms::NDevice_Event_Code::Shut_Down, Invalid_GUID, nullptr, 0);
     HRESULT hr = Global_Filter_Executor->Terminate(TRUE);
     if (!Succeeded(hr)) {
@@ -1084,8 +1098,10 @@ bool are_svgs_equal(const std::vector<SvgInfo> &a, const std::vector<SvgInfo> &b
 }
 
 #ifdef COMPILE_AS_EXECUTABLE
+
+
 int main() {
-    HRESULT res = chain_configuration->Load_From_File(L"../with_log.ini", nullptr);
+    HRESULT res = chain_configuration->Load_From_File(L"../conf_draw2.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
@@ -1093,8 +1109,12 @@ int main() {
     update_output_filters_parameters();
     execute();
 
-
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::cout << "-----------BEFORE SLEEP------------" << std::endl;
+    log_svgs_to_console();
+    std::this_thread::sleep_for(std::chrono::seconds(8));
+    // log svgs
+    std::cout << "-----------AFTER SLEEP------------" << std::endl;
+    log_svgs_to_console();
 
     stop_simulation();
     std::cout << "Simulation stopped." << std::endl;

@@ -62,7 +62,7 @@ def get_svgs():
 @config_bp.route("/fetch_logs", methods=["GET"])
 def get_logs():
     logs = get_logs_service()
-    print(f"logs: {logs}")
+    # print(f"logs: {logs}")
     return jsonify({"logs": logs})
 
 @config_bp.route("/execute", methods=["GET"])

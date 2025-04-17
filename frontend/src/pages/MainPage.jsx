@@ -42,12 +42,12 @@ function MainPage() {
     const [isStartDisabled, setIsStartDisabled] = useState(false);
     const [isStopDisabled, setIsStopDisabled] = useState(true);
     const [logIntervalId, setLogIntervalId] = useState(null);
+    const [drawIntervalId, setDrawIntervalId] = useState(null);
     const logsRef = useRef(null);
 
     useEffect(() => {
         logsRef.current = logs;
     }, [logs]);
-
 
 
     useEffect(() => {
@@ -92,7 +92,19 @@ function MainPage() {
 
     // fetch logs in loop after start simulation
 
-
+    const getOutputFilters = () => {
+        // filter only output filters like log, drawingv2, replay log
+        // output filters: "Log", "Drawing filter v2", "CSV File Log Replay"
+        const outputFilters = ["Log", "Drawing filter v2", "CSV File Log Replay"];
+        // do list where key is filter description if it is in the config
+        const list = {};
+        selectedFilters.forEach(filter => {
+            if (outputFilters.includes(filter.description)) {
+                list[filter.description] = filter;
+            }
+        });
+        return list;
+    }
 
 
     const handleStartButton = async () => {
@@ -102,60 +114,89 @@ function MainPage() {
                     const result = await executeConfiguration();
                     console.log("Execute Config Result:", result);
                     if (result === "0") {
-                        const svgs = await fetchSvgs();
-                        console.log("Fetched SVGs:", svgs);
-                        if (svgs) {
-                            setSvgs(svgs);
-                            setIsStartDisabled(true);
-                            setIsStopDisabled(false);
-                        } else {
-                            reject(new Error("Error starting simulation."));
-                        }
-                        // const logs = await fetchLogs();
-                        // console.log("Fetched Logs:", logs);
-                        // if (logs) {
-                        //     setLogs(logs);
-                        // } else {
-                        //     reject(new Error("Error fetching logs."));
-                        // }
-                        const logs = await fetchLogs();
-                        if (logs) {
-                            setLogs(logs);
-                        } else {
-                            reject(new Error("Error fetching logs."));
-                        }
+                        const outputFilters = getOutputFilters();
+                        console.log("Output Filters:", outputFilters);
+                        // drawing filter
 
-                        const intervalId = setInterval(async () => {
-                            try {
-                                const new_logs = await fetchLogs();
+                        const drawingFilter = outputFilters["Drawing filter v2"];
+                        if (drawingFilter) {
+                            console.log("Drawing filter detected!");
+                            const svgs = await fetchSvgs();
+                            console.log("Fetched SVGs:", svgs);
+                            if (svgs) {
+                                setSvgs(svgs);
+                                setIsStartDisabled(true);
+                                setIsStopDisabled(false);
+                            } else {
+                                reject(new Error("Error starting simulation."));
+                            }
+                            const drawIntervalId = setInterval(async () => {
+                                try {
+                                    const new_svgs = await fetchSvgs();
 
-                                if (!new_logs) return;
-
-                                let areSame = true;
-                                const currentLogs = logsRef.current;
-
-                                if (currentLogs?.length !== new_logs.length) {
-                                    console.log(`Logs length differs: old=${currentLogs?.length}, new=${new_logs.length}`);
-                                    areSame = false;
-                                } else {
-                                    for (let i = 0; i < new_logs.length; i++) {
-                                        if (new_logs[i] !== currentLogs[i]) {
-                                            console.log(`Log at index ${i} differs:\n  old: '${currentLogs[i]}'\n  new: '${new_logs[i]}'`);
-                                            areSame = false;
+                                    // SVGS
+                                    let svgsChanged = false;
+                                    if (svgs?.length !== new_svgs.length) {
+                                        svgsChanged = true;
+                                    } else {
+                                        for (let i = 0; i < new_svgs.length; i++) {
+                                            if (new_svgs[i].svg_str !== svgs[i].svg_str) {
+                                                svgsChanged = true;
+                                                break;
+                                            }
                                         }
                                     }
-                                }
+                                    if (svgsChanged) {
+                                        setSvgs(new_svgs);
+                                        // console.log("Updated SVGs:", new_svgs);
+                                    }
 
-                                if (!areSame) {
-                                    setLogs(new_logs);
-                                    console.log("Updated logs:", new_logs);
+                                } catch (err) {
+                                    console.error("Error while fetching SVGs:", err);
                                 }
-                            } catch (err) {
-                                console.error("Error while fetching logs:", err);
+                            }, 3000);
+
+                            setDrawIntervalId(drawIntervalId);
+                        }
+                        const logFilter = outputFilters["Log"];
+                        if (logFilter) {
+                            console.log("Log filter detected!");
+                            const logs = await fetchLogs();
+                            if (logs) {
+                                setLogs(logs);
+                                setIsStartDisabled(true);
+                                setIsStopDisabled(false);
+                            } else {
+                                reject(new Error("Error fetching logs."));
                             }
-                        }, 3000);
+                            const logIntervalId = setInterval(async () => {
+                                try {
+                                    const new_logs = await fetchLogs();
 
-                        setLogIntervalId(intervalId);
+                                    // LOGY
+                                    let logsChanged = false;
+                                    if (logs?.length !== new_logs.length) {
+                                        logsChanged = true;
+                                    } else {
+                                        for (let i = 0; i < new_logs.length; i++) {
+                                            if (new_logs[i] !== logs[i]) {
+                                                logsChanged = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (logsChanged) {
+                                        setLogs(new_logs);
+                                        // console.log("Updated logs:", new_logs);
+                                    }
+                                } catch (err) {
+                                    console.error("Error while fetching logs:", err);
+                                }
+                            }, 3000);
+
+                            setLogIntervalId(logIntervalId);
+                        }
+
 
                         resolve("Simulation started successfully");
 
@@ -194,6 +235,10 @@ function MainPage() {
                         if (logIntervalId) {
                             clearInterval(logIntervalId);
                             setLogIntervalId(null);
+                        }
+                        if (drawIntervalId) {
+                            clearInterval(drawIntervalId);
+                            setDrawIntervalId(null);
                         }
                         setIsStartDisabled(false);
                         setIsStopDisabled(true);
