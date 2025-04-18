@@ -2,8 +2,18 @@ import React from "react";
 import {Modal, Button, Container, Form, InputGroup} from "react-bootstrap";
 import PropTypes from "prop-types";
 
-const LoadConfigModal = ({show, onClose, setFile, onLoad}) => {
+const LoadConfigModal = ({show, onClose, setConfigFile, setCsvFiles, onLoad}) => {
 
+    const handleFileChange = (files) => {
+        const configFile = Array.from(files).find(file => file.name.endsWith('.ini'));
+        const csvFiles = Array.from(files).filter(file => file.name.endsWith('.csv'));
+        if (configFile) {
+            setConfigFile(configFile);
+        }
+        if (csvFiles.length > 0) {
+            setCsvFiles(csvFiles);
+        }
+    }
 
     return (
         <Modal size="lg" show={show} onHide={onClose}>
@@ -15,7 +25,8 @@ const LoadConfigModal = ({show, onClose, setFile, onLoad}) => {
                     <Form>
                         <Form.Group controlId="formFile" className="mb-3">
                             <Form.Label>Select configuration file to load</Form.Label>
-                            <Form.Control type="file" onChange={(e) => setFile(e.target.files[0])}
+                            <Form.Control type="file" multiple onChange={(e) =>
+                                handleFileChange(e.target.files)}
                             />
                         </Form.Group>
                     </Form>
@@ -31,7 +42,8 @@ const LoadConfigModal = ({show, onClose, setFile, onLoad}) => {
 LoadConfigModal.propTypes = {
     show: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
-    setFile: PropTypes.func.isRequired,
+    setConfigFile: PropTypes.func.isRequired,
+    setCsvFiles: PropTypes.func.isRequired,
     onLoad: PropTypes.func.isRequired,
 }
 

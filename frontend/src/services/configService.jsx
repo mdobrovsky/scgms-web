@@ -80,13 +80,21 @@ export const saveConfiguration = async (configFileName) => {
     }
 }
 
-export const loadConfiguration = async (file) => {
+export const loadConfiguration = async (file, csvFiles) => {
     try {
         if (!file) return;
 
         const formData = new FormData();
         formData.append("file", file);
         formData.append("file_name", file.name);
+        if (csvFiles && csvFiles.length > 0) {
+            for (let i = 0; i < csvFiles.length; i++) {
+                formData.append(`csv_files[${i}]`, csvFiles[i]);
+                formData.append(`csv_names[${i}]`, csvFiles[i].name);
+            }
+
+        }
+
         const response = await axios.post(
             LOAD_CONFIGURATION_URL,
             formData,
@@ -96,6 +104,7 @@ export const loadConfiguration = async (file) => {
                 },
             }
         );
+
         console.log("Server response:", response.data);
         return response.data;
     } catch (error) {

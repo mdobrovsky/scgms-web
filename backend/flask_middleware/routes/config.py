@@ -37,13 +37,29 @@ def save_configuration():
 
 @config_bp.route("/load", methods=["POST"])
 def load_configuration():
+    # print(request.form)
     uploaded_file = request.files.get("file")
     file_name = request.form.get("file_name", "file")
     if not uploaded_file:
         return jsonify({"error": "No file uploaded"}), 400
     save_path = f"{LOADED_CONFIGS_DIRECTORY}/{file_name}"
     uploaded_file.save(save_path)
-    print(uploaded_file)
+    # print(uploaded_file)
+    csv_files = []
+    i = 0
+    while True:
+        key = f'csv_files[{i}]'
+        if key in request.files:
+            csv_file = request.files[key]
+            csv_files.append(csv_file)
+            i += 1
+        else:
+            break
+    for csv_file in csv_files:
+        csv_file_name = csv_file.filename
+        csv_file_path = os.path.join(LOADED_CONFIGS_DIRECTORY, csv_file_name)
+        csv_file.save(csv_file_path)
+
     result = load_configuration_service(save_path)
     # result = "0"
     print("result: ", result)

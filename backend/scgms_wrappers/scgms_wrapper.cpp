@@ -718,8 +718,8 @@ void retrieve_drawings() {
                     auto svg_str = refcnt::Char_Container_To_String(svg.get());
                     // std::cout << svg_str << "\n";
                     SvgInfo svg_info;
+                    svg_info.name = it->name ? Narrow_WString(it->name) : "Unnamed";
                     svg_info.id = Narrow_WString(GUID_To_WString(it->id));
-                    svg_info.name = Narrow_WString(it->name);
                     svg_info.svg_str = svg_str;
                     svgs.push_back(svg_info);
                 } else {
@@ -813,6 +813,7 @@ void monitor_drawing_updates_loop() {
 }
 
 std::string execute() {
+    update_output_filters_parameters();
     log_lines = {};
     svgs = {};
     refcnt::Swstr_list errors;
@@ -1102,21 +1103,27 @@ bool are_svgs_equal(const std::vector<SvgInfo> &a, const std::vector<SvgInfo> &b
 
 
 int main() {
-    HRESULT res = chain_configuration->Load_From_File(L"../conf_draw2.ini", nullptr);
+    HRESULT res = chain_configuration->Load_From_File(L"../cfg1/config.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
     }
-    update_output_filters_parameters();
+
     execute();
-
-    std::cout << "-----------BEFORE SLEEP------------" << std::endl;
-    log_svgs_to_console();
-    std::this_thread::sleep_for(std::chrono::seconds(8));
-    // log svgs
-    std::cout << "-----------AFTER SLEEP------------" << std::endl;
-    log_svgs_to_console();
-
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    // prints svgs
+    auto svgs = get_svgs();
+    for (const auto &svg: svgs) {
+        std::cout << "SVG ID: " << svg.id << std::endl;
+        std::cout << "SVG Name: " << svg.name << std::endl;
+        std::cout << "SVG String: " << svg.svg_str << std::endl;
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    // prints logs
+    auto logs = get_logs();
+    for (const auto &log: logs) {
+        std::cout << "Log: " << log << std::endl;
+    }
     stop_simulation();
     std::cout << "Simulation stopped." << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(3));

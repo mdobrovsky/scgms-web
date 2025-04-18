@@ -35,7 +35,8 @@ function MainPage() {
     const [fileName, setFileName] = useState("");
     const [fileNameError, setFileNameError] = useState("");
     const [activeTab, setActiveTab] = useState("configuration");
-    const [file, setFile] = useState(null);
+    const [configFile, setConfigFile] = useState(null);
+    const [csvFiles, setCsvFiles] = useState(null);
     const [svgs, setSvgs] = useState([]);
     const [logs, setLogs] = useState([]);
     const disableModelBoundsNav = selectedFilters.length === 0;
@@ -304,11 +305,11 @@ function MainPage() {
         }
     }
 
-    const handleLoadConfig = async (file) => {
+    const handleLoadConfig = async (file, csvFiles) => {
         await toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
-                    const result = await loadConfiguration(file);
+                    const result = await loadConfiguration(file, csvFiles);
                     console.log("Load Config Result:", result);
                     if (result === "0") {
                         const fetchedFilters = await fetchChainFilters();
@@ -418,7 +419,6 @@ function MainPage() {
                                    setSelectedModel={setSelectedModel}
                                    setFilter={setSelectedFilter}
                                    setSelectedFilters={setSelectedFilters}
-
                 />
             )}
             <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}
@@ -430,7 +430,8 @@ function MainPage() {
 
             />
             <LoadConfigModal show={showLoadModal} onClose={() => setShowLoadModal(false)}
-                             setFile={setFile} onLoad={() => handleLoadConfig(file)}
+                             setConfigFile={setConfigFile} setCsvFiles={setCsvFiles}
+                             onLoad={() => handleLoadConfig(configFile, csvFiles)}
             />
 
         </Container>
