@@ -65,10 +65,10 @@ build CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o: CXX_COMPILER__scgms_wrap
 #############################################
 # Link the shared module /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so
 
-build /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so: CXX_MODULE_LIBRARY_LINKER__scgms_wrapper_Debug CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o
+build /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so: CXX_MODULE_LIBRARY_LINKER__scgms_wrapper_Debug CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o | /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib
   ARCH_FLAGS = -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk
   LANGUAGE_COMPILE_FLAGS = -g
-  LINK_LIBRARIES = -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib -Wl,-rpath,/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled  -lscgms  -lpython3.12
+  LINK_LIBRARIES = -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib -Wl,-rpath,/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib  -lpython3.12
   LINK_PATH = -L/usr/local/lib   -L/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib   -L/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled
   OBJECT_DIR = CMakeFiles/scgms_wrapper.dir
   POST_BUILD = :
@@ -101,9 +101,9 @@ build CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o: CXX_COMPILER__scgm
 #############################################
 # Link the executable scgms_wrapper_debug
 
-build scgms_wrapper_debug: CXX_EXECUTABLE_LINKER__scgms_wrapper_debug_Debug CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o
+build scgms_wrapper_debug: CXX_EXECUTABLE_LINKER__scgms_wrapper_debug_Debug CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o | /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib
   FLAGS = -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk
-  LINK_LIBRARIES = -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib -Wl,-rpath,/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled  -lscgms  -lpython3.12
+  LINK_LIBRARIES = -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib -Wl,-rpath,/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib  -lpython3.12
   LINK_PATH = -L/usr/local/lib   -L/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib   -L/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled
   OBJECT_DIR = CMakeFiles/scgms_wrapper_debug.dir
   POST_BUILD = :

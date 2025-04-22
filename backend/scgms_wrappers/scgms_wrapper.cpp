@@ -32,8 +32,9 @@
 
 solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so that we can cancel from sigint
 scgms::SFilter_Executor Global_Filter_Executor;
+//
+std::optional<scgms::SPersistent_Filter_Chain_Configuration> chain_configuration;
 
-scgms::SPersistent_Filter_Chain_Configuration chain_configuration;
 scgms::SDrawing_Filter_Inspection_v2 insp_draw;
 scgms::SLog_Filter_Inspection insp_log;
 int drawing_v2_width;
@@ -44,7 +45,7 @@ std::atomic<bool> stop_monitor_thread{false};
 std::vector<std::string> log_lines;
 ULONG current_clock = 0;
 
-
+//
 // structures for filter info
 struct FilterParameter {
     std::string parameter_type;
@@ -123,7 +124,8 @@ MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
 }
 
 std::string reset_configuration() {
-    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    chain_configuration.emplace();
+
     svgs.clear();
     return "0";
 }
@@ -201,7 +203,7 @@ std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
 
 std::string add_filter(const std::string &guid_string) {
     bool ok;
-    scgms::SFilter_Configuration_Link link = chain_configuration.Add_Link
+    scgms::SFilter_Configuration_Link link = (*chain_configuration).Add_Link
             (WString_To_GUID(Widen_String(guid_string), ok));
     return ok ? "0" : "1";
 }
@@ -209,7 +211,7 @@ std::string add_filter(const std::string &guid_string) {
 std::string save_configuration(std::string &path) {
     refcnt::Swstr_list errors;
 
-    HRESULT res = chain_configuration->Save_To_File(Widen_String(path).c_str(), errors.get());
+    HRESULT res = (*chain_configuration)->Save_To_File(Widen_String(path).c_str(), errors.get());
     errors.for_each([](const std::wstring &str) {
         std::wcerr << str << std::endl;
     });
@@ -219,9 +221,10 @@ std::string save_configuration(std::string &path) {
 
 std::string load_configuration(std::string &path) {
     refcnt::Swstr_list errors;
-    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    chain_configuration.emplace();
 
-    HRESULT res = chain_configuration->Load_From_File(Widen_String(path).c_str(), errors.get());
+
+    HRESULT res = (*chain_configuration)->Load_From_File(Widen_String(path).c_str(), errors.get());
     errors.for_each([](const std::wstring &str) {
         std::wcerr << str << std::endl;
     });
@@ -231,15 +234,16 @@ std::string load_configuration(std::string &path) {
 
 
 std::string remove_filter(int index) {
-    HRESULT res = chain_configuration->remove(index);
+    HRESULT res = (*chain_configuration)->remove(index);
     return Succeeded(res) ? "0" : "1";
 }
 
 
 std::string remove_all_filters() {
-    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    chain_configuration.emplace();
 
-    HRESULT res = chain_configuration->empty();
+
+    HRESULT res = (*chain_configuration)->empty();
     return Succeeded(res) ? "0" : "1";
 }
 
@@ -337,7 +341,7 @@ std::vector<double> split_double_array(const std::string &value) {
 void get_link(const std::string &index, scgms::SFilter_Configuration_Link &link) {
     size_t target_index = std::stoi(index);
     size_t current_index = 0;
-    chain_configuration.for_each([&](scgms::SFilter_Configuration_Link chain_link) {
+    (*chain_configuration).for_each([&](scgms::SFilter_Configuration_Link chain_link) {
         if (current_index == target_index) {
             link = std::move(chain_link);
         }
@@ -436,12 +440,12 @@ std::string configure_filter(
 }
 
 std::string move_filter_up(int index) {
-    HRESULT res = chain_configuration->move(index, index - 1);
+    HRESULT res = (*chain_configuration)->move(index, index - 1);
     return Succeeded(res) ? "0" : "1";
 }
 
 std::string move_filter_down(int index) {
-    HRESULT res = chain_configuration->move(index, index + 1);
+    HRESULT res = (*chain_configuration)->move(index, index + 1);
     return Succeeded(res) ? "0" : "1";
 }
 
@@ -585,7 +589,8 @@ void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, 
 std::vector<FilterInfo> get_available_filters() {
     const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
     std::vector<FilterInfo> filters;
-    // chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    // chain_configuration.emplace();
+
 
 
     // Iterate through all filters
@@ -602,7 +607,7 @@ std::vector<FilterInfo> get_available_filters() {
 
 std::vector<FilterInfo> get_chain_filters() {
     std::vector<FilterInfo> filters;
-    chain_configuration.for_each([&filters](scgms::SFilter_Configuration_Link link) mutable {
+    (*chain_configuration).for_each([&filters](scgms::SFilter_Configuration_Link link) mutable {
         FilterInfo info;
         convert_filter_descriptor_to_info(link.descriptor(), info, &link);
         filters.push_back(info);
@@ -611,7 +616,7 @@ std::vector<FilterInfo> get_chain_filters() {
 }
 
 int update_output_filters_parameters() {
-    chain_configuration.for_each([](scgms::SFilter_Configuration_Link link) mutable {
+    (*chain_configuration).for_each([](scgms::SFilter_Configuration_Link link) mutable {
         std::cout << "[CHAIN] Filter ID: " << Narrow_WChar(link.descriptor().description) << std::endl;
         if (IsEqualGUID(link.descriptor().id, scgms::IID_Drawing_Filter_v2)) {
             scgms::SFilter_Parameter width_p = link.Resolve_Parameter(link.descriptor().config_parameter_name[0]);
@@ -749,6 +754,7 @@ std::vector<std::string> get_logs() {
     }
     return log_lines;
 }
+
 void log_svgs_to_console() {
     std::cout << "SVGs:" << std::endl;
     auto svgs = get_svgs();
@@ -794,7 +800,6 @@ void monitor_drawing_updates_loop() {
                 // retrieve_drawings();
 
                 if (insp_draw->Logical_Clock(&current_clock) == S_OK) {
-
                     std::cout << "[DEBUG] Current logical clock: " << current_clock << std::endl;
                     if (current_clock != previous_clock) {
                         previous_clock = current_clock;
@@ -823,7 +828,7 @@ std::string execute() {
 
     // Execute the filter chain
     Global_Filter_Executor = scgms::SFilter_Executor{
-        chain_configuration.get(),
+        (*chain_configuration).get(),
         reinterpret_cast<scgms::TOn_Filter_Created>(on_filter_created_callback), // Callback function
         nullptr, // Callback data
         errors,
@@ -836,7 +841,6 @@ std::string execute() {
             std::lock_guard<std::mutex> lock(drawing_mutex);
             std::cout << "[EXECUTE] Calling retrieve_drawings() directly..." << std::endl;
             retrieve_drawings();
-
         }
         if (insp_log) {
             std::cout << "[EXECUTE] Calling retrieve_logs() directly..." << std::endl;
@@ -848,8 +852,7 @@ std::string execute() {
 
             monitor_thread = std::thread(monitor_drawing_updates_loop);
             std::cout << "[EXECUTE] Monitor thread started." << std::endl;
-        }
-        else {
+        } else {
             std::cout << "[EXECUTE] Insp not set! Drawing filter not detected." << std::endl;
         }
 
@@ -857,14 +860,16 @@ std::string execute() {
         std::cout << "[EXECUTE] Filter chain execution completed." << std::endl;
     } else {
         std::wcerr << L"[EXECUTE] Failed to create filter executor." << std::endl;
-        errors.for_each([](const std::wstring &str) {
+        std::string error_message = "";
+        errors.for_each([&error_message](const std::wstring &str) mutable {
+            error_message += Narrow_WString(str) + "\n";
             std::wcerr << str << std::endl;
         });
-        return "1";
+        std::cout << "[EXECUTE] Errors: " << error_message << std::endl;
+        return error_message;
     }
     return "0";
 }
-
 
 
 /**
@@ -888,7 +893,8 @@ std::string load_scgms_lib() {
 }
 
 void init_config() {
-    chain_configuration = scgms::SPersistent_Filter_Chain_Configuration();
+    chain_configuration.emplace();
+
 }
 
 void inject_event(const scgms::NDevice_Event_Code &code, const GUID &signal_id, const wchar_t *info,
@@ -1099,34 +1105,100 @@ bool are_svgs_equal(const std::vector<SvgInfo> &a, const std::vector<SvgInfo> &b
     return true;
 }
 
+std::string optimize_parameters(const std::vector<int>& filter_indices,
+                                const std::vector<std::string>& parameter_names,
+                                const std::string& solver_id_str,
+                                int population_size,
+                                int max_generations) {
+    if (filter_indices.size() != parameter_names.size()) {
+        return "Error: Mismatch in filter_indices and parameter_names size.";
+    }
+
+    if (population_size < 5 || max_generations < 1) {
+        return "Error: population_size must be >= 5 and max_generations >= 1.";
+    }
+
+    bool ok;
+    GUID solver_id = WString_To_GUID(Widen_String(solver_id_str), ok);
+    if (!ok) return "Error: Invalid solver GUID.";
+
+    std::vector<size_t> filter_indices_sized(filter_indices.begin(), filter_indices.end());
+
+    std::vector<std::wstring> wide_parameter_names;
+    std::vector<const wchar_t*> parameter_name_ptrs;
+    for (const auto& name : parameter_names) {
+        wide_parameter_names.push_back(Widen_String(name));
+        parameter_name_ptrs.push_back(wide_parameter_names.back().c_str());
+    }
+
+    refcnt::Swstr_list error_description;
+    Global_Progress = solver::Null_Solver_Progress;
+
+    std::cout << "[OPTIMIZE] Running Optimize_Parameters with:\n";
+    std::cout << "- Filters: ";
+    for (auto idx : filter_indices) std::cout << idx << " ";
+    std::cout << "\n- Parameters: ";
+    for (const auto& p : parameter_names) std::cout << p << " ";
+    std::cout << "\n- Solver ID: " << solver_id_str << "\n";
+
+
+
+    HRESULT res = scgms::Optimize_Parameters(
+    (*chain_configuration),
+        filter_indices_sized.data(),
+        parameter_name_ptrs.data(),
+        filter_indices_sized.size(),
+        nullptr, nullptr, // Setup callback, On_Filter_Created
+        solver_id,
+        population_size,
+        max_generations,
+        nullptr, 0, // Hints
+        Global_Progress,
+        error_description
+    );
+
+    if (!Succeeded(res)) {
+        std::string err_msg = "Optimization failed:\n";
+        error_description.for_each([&err_msg](const std::wstring &msg) {
+            err_msg += Narrow_WString(msg) + "\n";
+        });
+        return err_msg;
+    }
+
+    return "0"; // success
+}
+
+
 #ifdef COMPILE_AS_EXECUTABLE
 
 
 int main() {
-    HRESULT res = chain_configuration->Load_From_File(L"../cfg1/config.ini", nullptr);
+    chain_configuration.emplace();
+    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg1/config.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
     }
 
     execute();
+
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    // prints svgs
-    auto svgs = get_svgs();
-    for (const auto &svg: svgs) {
-        std::cout << "SVG ID: " << svg.id << std::endl;
-        std::cout << "SVG Name: " << svg.name << std::endl;
-        std::cout << "SVG String: " << svg.svg_str << std::endl;
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    // prints logs
-    auto logs = get_logs();
-    for (const auto &log: logs) {
-        std::cout << "Log: " << log << std::endl;
-    }
-    stop_simulation();
-    std::cout << "Simulation stopped." << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    //
+    // std::vector<int> filter_indices = {7, 10}; // Nahraď podle skutečných indexů
+    // std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"}; // Pozor na správné pořadí a názvy
+    // std::string solver_guid = "{1b21b62f-7c6c-4027-89bc-687d8bd32b3c}"; // MetaDE solver
+    //
+    // int population = 30;
+    // int generations = 100;
+
+    // std::string result = optimize_parameters(filter_indices, parameter_names, solver_guid, population, generations);
+
+    // if (result != "0") {
+    //     std::cerr << "Optimization failed:\n" << result << std::endl;
+    //     return 1;
+    // } else {
+    //     std::cout << "Optimization finished successfully.\n";
+    // }
 
 
     return 0;
