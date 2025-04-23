@@ -1,7 +1,22 @@
 import {Alert, Modal, Button, Container, Row, Col, Form} from "react-bootstrap";
+import React from "react";
+import PropTypes from "prop-types";
 
 
-const OptimizeParametersPage = ({solvers}) => {
+const OptimizeParametersPage = ({solvers, filters}) => {
+    const [filtersToOptimize, setFiltersToOptimize] = React.useState([]);
+
+    React.useEffect(() => {
+        const optimizedFilters = filters.filter((filter) =>
+            filter.parameters.some(
+                (p) =>
+                    p.parameter_type === "ptDouble_Array" &&
+                    (p.config_parameter_name === "Model_Bounds" || p.config_parameter_name === "Parameters")
+            )
+        );
+        setFiltersToOptimize(optimizedFilters);
+    }, [filters]);
+
 
 
     return (
@@ -12,48 +27,49 @@ const OptimizeParametersPage = ({solvers}) => {
                     <Form.Group controlId="formMultiSelect" className="mb-3">
                         <Form.Label>Parameters</Form.Label>
                         <Form.Select multiple size={6}>
-                            <option value="1">[7] Calculated signal – Physical activity detection</option>
-                            <option value="2">[10] Signal generator – Bergman extended minimal model</option>
-                            <option value="3">...</option>
+                            {filtersToOptimize.map((filter, index) => (
+                                <option key={index} value={filter.guid}>
+                                    {filter.description}
+                                </option>))}
                         </Form.Select>
                     </Form.Group>
                 </Col>
             </Row>
-                <Row>
-                    <Col>
-                        <Form.Group controlId="formSolver" className="mb-3">
-                            <Form.Label>Solver</Form.Label>
-                            <Form.Select>
-                                <option value="">Select a solver...</option>
-                                {solvers.map((solver, index) => (
-                                    <option key={index} value={solver}>{solver.description}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col>
-                        <Form.Group controlId={"formMaxGenerations"} className="mb-3">
-                            <Form.Label>Maximum generations</Form.Label>
-                            <Form.Control type="number"
-                                          defaultValue={"10000"}
+            <Row>
+                <Col>
+                    <Form.Group controlId="formSolver" className="mb-3">
+                        <Form.Label>Solver</Form.Label>
+                        <Form.Select>
+                            <option value="">Select a solver...</option>
+                            {solvers.map((solver, index) => (
+                                <option key={index} value={solver}>{solver.description}</option>
+                            ))}
+                        </Form.Select>
+                    </Form.Group>
+                </Col>
+            </Row>
+            <Row>
+                <Col>
+                    <Form.Group controlId={"formMaxGenerations"} className="mb-3">
+                        <Form.Label>Maximum generations</Form.Label>
+                        <Form.Control type="number"
+                                      defaultValue={"10000"}
 
-                            />
-                        </Form.Group>
-                    </Col>
-                </Row>
-                <Row>
-                    <Col>
-                        <Form.Group controlId={"formPopulationSize"} className="mb-3">
-                            <Form.Label>Population Size</Form.Label>
-                            <Form.Control type="number"
-                                          defaultValue={"100"}
+                        />
+                    </Form.Group>
+                </Col>
+            </Row>
+            <Row>
+                <Col>
+                    <Form.Group controlId={"formPopulationSize"} className="mb-3">
+                        <Form.Label>Population Size</Form.Label>
+                        <Form.Control type="number"
+                                      defaultValue={"100"}
 
-                            />
-                        </Form.Group>
-                    </Col>
-                </Row>
+                        />
+                    </Form.Group>
+                </Col>
+            </Row>
             <Row>
                 <Col>
                     <Alert variant="secondary">
@@ -68,7 +84,8 @@ const OptimizeParametersPage = ({solvers}) => {
                                 b) at least one (maximum 10), configured Signal Error filter(s) (higher priority first)
                             </li>
                             <li>
-                                c) exactly one filter must emit Shutdown, and any feedback receiver cannot precede this filter
+                                c) exactly one filter must emit Shutdown, and any feedback receiver cannot precede this
+                                filter
                             </li>
                         </ul>
                         <p className="mt-2 mb-0">
@@ -87,8 +104,8 @@ const OptimizeParametersPage = ({solvers}) => {
             </Row>
             <Row>
                 <Col className="d-flex flex-row gap-3">
-                    <Button variant="outline-dark" className="mt-3" style={{ width: '150px' }}>Solve</Button>
-                    <Button variant="outline-dark" className="mt-3" style={{ width: '150px' }}>Stop</Button>
+                    <Button variant="outline-dark" className="mt-3" style={{width: '150px'}}>Solve</Button>
+                    <Button variant="outline-dark" className="mt-3" style={{width: '150px'}}>Stop</Button>
                 </Col>
             </Row>
 
@@ -96,6 +113,27 @@ const OptimizeParametersPage = ({solvers}) => {
         </Container>
     );
 };
+
+OptimizeParametersPage.propTypes = {
+    solvers: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+    filters: PropTypes.arrayOf(
+        PropTypes.shape({
+            guid: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
+            parameters: PropTypes.arrayOf(
+                PropTypes.shape({
+                    parameter_type: PropTypes.string.isRequired,
+                    config_parameter_name: PropTypes.string.isRequired,
+                })
+            ).isRequired,
+        })
+    ).isRequired,
+}
 
 
 export default OptimizeParametersPage;

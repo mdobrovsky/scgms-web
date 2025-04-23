@@ -414,7 +414,7 @@ function MainPage() {
             )}
 
             {activeTab === "optimize" && (
-                <OptimizeParametersPage solvers={solvers}/>
+                <OptimizeParametersPage solvers={solvers} filters={selectedFilters}/>
             )}
 
             {selectedFilter && (
