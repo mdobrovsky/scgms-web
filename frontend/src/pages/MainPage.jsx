@@ -19,6 +19,7 @@ import LoadConfigModal from "../components/LoadConfigModal.jsx";
 import {toast} from "react-toastify";
 import {updateFilterIndexes} from "../services/utils.jsx";
 import {SimulationPage} from "../components/SimulationPage.jsx";
+import OptimizeParametersPage from "../components/OptimizeParametersPage.jsx";
 
 function MainPage() {
     const [availableFilters, setAvailableFilters] = useState([]);
@@ -32,6 +33,7 @@ function MainPage() {
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showLoadModal, setShowLoadModal] = useState(false);
+    const [showOptimizeModal, setShowOptimizeModal] = useState(false);
     const [fileName, setFileName] = useState("");
     const [fileNameError, setFileNameError] = useState("");
     const [activeTab, setActiveTab] = useState("configuration");
@@ -205,7 +207,7 @@ function MainPage() {
 
 
                     } else {
-                        reject(new Error("Error starting simulation."));
+                        reject(new Error(result));
                     }
                 } catch (err) {
                     reject(err);
@@ -372,6 +374,9 @@ function MainPage() {
                 <Nav.Item>
                     <Nav.Link eventKey="simulation" disabled={disableModelBoundsNav}>Simulation</Nav.Link>
                 </Nav.Item>
+                <Nav.Item>
+                    <Nav.Link eventKey="optimize" disabled={disableModelBoundsNav}>Optimize parameters</Nav.Link>
+                </Nav.Item>
             </Nav>
             {(activeTab === "configuration") && (
                 <Container className="mt-1 mb-0">
@@ -408,6 +413,10 @@ function MainPage() {
                                 logs={logs}/>
             )}
 
+            {activeTab === "optimize" && (
+                <OptimizeParametersPage solvers={solvers}/>
+            )}
+
             {selectedFilter && (
                 <FilterConfigModal filter={selectedFilter} show={showConfigModal}
                                    onClose={handleCloseConfigModal}
@@ -421,6 +430,7 @@ function MainPage() {
                                    setSelectedFilters={setSelectedFilters}
                 />
             )}
+
             <SaveConfigModal show={showSaveModal} onClose={() => setShowSaveModal(false)}
                              fileName={fileName}
                              setFileName={setFileName}

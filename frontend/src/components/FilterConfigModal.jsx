@@ -14,6 +14,7 @@ const FilterConfigModal = ({
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("parameters");
     const [disableModelBoundsNav, setDisableModelBoundsNav] = useState(true);
+    const [secondTabName, setSecondTabName] = useState("");
     useEffect(() => {
         if (selectedModel) {
             setDisableModelBoundsNav(false);
@@ -21,7 +22,20 @@ const FilterConfigModal = ({
             setDisableModelBoundsNav(true);
             setActiveTab("parameters");
         }
+
     }, [selectedModel]);
+    useEffect(() => {
+        filter.parameters.forEach((parameter) => {
+            if (parameter.parameter_type === "ptDouble_Array") {
+                if (parameter.config_parameter_name === "Model_Bounds") {
+                    setSecondTabName("Model bounds");
+                } else if (parameter.config_parameter_name === "Parameters") {
+                    setSecondTabName("Parameters");
+                }
+            }
+
+        })
+    }, [filter]);
 
 
     if (!filter) return null;
@@ -138,7 +152,7 @@ const FilterConfigModal = ({
                         <Nav.Link eventKey="parameters">Main parameters</Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
-                        <Nav.Link eventKey="bounds" disabled={disableModelBoundsNav}>Model bounds</Nav.Link>
+                        <Nav.Link eventKey="bounds" disabled={disableModelBoundsNav}>{secondTabName}</Nav.Link>
                     </Nav.Item>
                 </Nav>
                 <Container>

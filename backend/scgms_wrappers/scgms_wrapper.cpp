@@ -1184,14 +1184,14 @@ int main() {
 
     std::this_thread::sleep_for(std::chrono::seconds(3));
     //
-    // std::vector<int> filter_indices = {7, 10}; // Nahraď podle skutečných indexů
-    // std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"}; // Pozor na správné pořadí a názvy
-    // std::string solver_guid = "{1b21b62f-7c6c-4027-89bc-687d8bd32b3c}"; // MetaDE solver
-    //
-    // int population = 30;
-    // int generations = 100;
+    std::vector<int> filter_indices = {7, 10}; // Nahraď podle skutečných indexů
+    std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"}; // Pozor na správné pořadí a názvy
+    std::string solver_guid = "{1b21b62f-7c6c-4027-89bc-687d8bd32b3c}"; // MetaDE solver
 
-    // std::string result = optimize_parameters(filter_indices, parameter_names, solver_guid, population, generations);
+    int population = 30;
+    int generations = 100;
+
+    std::string result = optimize_parameters(filter_indices, parameter_names, solver_guid, population, generations);
 
     // if (result != "0") {
     //     std::cerr << "Optimization failed:\n" << result << std::endl;
