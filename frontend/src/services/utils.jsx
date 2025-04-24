@@ -15,4 +15,10 @@ export const updateFilterIndexes = (filters) => {
     return filters.map((f, i) => ({ ...f, index: i.toString() }));
 };
 
+export const findCorrespondingModelName = (filter, models) => {
+    const guid = filter.parameters.find((p => p.config_parameter_name === "Model")).value;
+    const model = models.find((model) => model.id === guid);
+    return model ? model.description : "";
+}
+
 export default convertDoubleToTimeParts;

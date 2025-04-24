@@ -1,9 +1,10 @@
 import {Alert, Modal, Button, Container, Row, Col, Form} from "react-bootstrap";
 import React from "react";
+import {findCorrespondingModelName} from "../services/utils.jsx";
 import PropTypes from "prop-types";
 
 
-const OptimizeParametersPage = ({solvers, filters}) => {
+const OptimizeParametersPage = ({solvers, filters, models}) => {
     const [filtersToOptimize, setFiltersToOptimize] = React.useState([]);
 
     React.useEffect(() => {
@@ -15,8 +16,10 @@ const OptimizeParametersPage = ({solvers, filters}) => {
             )
         );
         setFiltersToOptimize(optimizedFilters);
-    }, [filters]);
 
+
+
+    }, [filters]);
 
 
     return (
@@ -29,7 +32,8 @@ const OptimizeParametersPage = ({solvers, filters}) => {
                         <Form.Select multiple size={6}>
                             {filtersToOptimize.map((filter, index) => (
                                 <option key={index} value={filter.guid}>
-                                    {filter.description}
+                                    [{filter.index}] {filter.description} - {findCorrespondingModelName(filter, models)}
+
                                 </option>))}
                         </Form.Select>
                     </Form.Group>
@@ -131,6 +135,12 @@ OptimizeParametersPage.propTypes = {
                     config_parameter_name: PropTypes.string.isRequired,
                 })
             ).isRequired,
+        })
+    ).isRequired,
+    models: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            description: PropTypes.string.isRequired,
         })
     ).isRequired,
 }

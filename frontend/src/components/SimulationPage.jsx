@@ -17,6 +17,7 @@ export const SimulationPage = ({handleStartButton, isStartDisabled, isStopDisabl
                     <SimulationTabs svgs={svgs} logs={logs} />
                 </Col>
 
+
                 <Col md={2}>
                     <div className="d-flex flex-column gap-2">
                         <h5>Time segments</h5>
