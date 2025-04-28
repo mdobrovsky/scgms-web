@@ -3,6 +3,9 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+#include <mutex>
+#include <thread>
+#include <chrono>
 
 
 #include <pybind11/pybind11.h>
@@ -34,6 +37,10 @@ solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so t
 scgms::SFilter_Executor Global_Filter_Executor;
 //
 std::optional<scgms::SPersistent_Filter_Chain_Configuration> chain_configuration;
+
+static std::vector<std::wstring> wide_parameter_names;
+static std::vector<const wchar_t *> parameter_name_ptrs;
+
 
 scgms::SDrawing_Filter_Inspection_v2 insp_draw;
 scgms::SLog_Filter_Inspection insp_log;
@@ -592,7 +599,6 @@ std::vector<FilterInfo> get_available_filters() {
     // chain_configuration.emplace();
 
 
-
     // Iterate through all filters
     for (size_t i = 0; i < filter_list.size(); ++i) {
         const scgms::TFilter_Descriptor &filter = filter_list[i];
@@ -606,6 +612,9 @@ std::vector<FilterInfo> get_available_filters() {
 
 
 std::vector<FilterInfo> get_chain_filters() {
+    if (!chain_configuration) {
+        chain_configuration.emplace();
+    }
     std::vector<FilterInfo> filters;
     (*chain_configuration).for_each([&filters](scgms::SFilter_Configuration_Link link) mutable {
         FilterInfo info;
@@ -615,9 +624,18 @@ std::vector<FilterInfo> get_chain_filters() {
     return filters;
 }
 
+std::vector<scgms::TFilter_Descriptor> get_chain_filter_descriptors() {
+    std::vector<scgms::TFilter_Descriptor> filter_descriptors;
+    (*chain_configuration).for_each([&filter_descriptors](scgms::SFilter_Configuration_Link link) mutable {
+        filter_descriptors.push_back(link.descriptor());
+    });
+    return filter_descriptors;
+}
+
+
 int update_output_filters_parameters() {
     (*chain_configuration).for_each([](scgms::SFilter_Configuration_Link link) mutable {
-        std::cout << "[CHAIN] Filter ID: " << Narrow_WChar(link.descriptor().description) << std::endl;
+        // std::cout << "[CHAIN] Filter ID: " << Narrow_WChar(link.descriptor().description) << std::endl;
         if (IsEqualGUID(link.descriptor().id, scgms::IID_Drawing_Filter_v2)) {
             scgms::SFilter_Parameter width_p = link.Resolve_Parameter(link.descriptor().config_parameter_name[0]);
             std::string w_value = get_parameter_value(width_p);
@@ -629,8 +647,8 @@ int update_output_filters_parameters() {
             drawing_v2_height = h_value.empty()
                                     ? 600
                                     : std::stoi(h_value);
-            std::cout << "Drawing filter width: " << drawing_v2_width << std::endl;
-            std::cout << "Drawing filter height: " << drawing_v2_height << std::endl;
+            // std::cout << "Drawing filter width: " << drawing_v2_width << std::endl;
+            // std::cout << "Drawing filter height: " << drawing_v2_height << std::endl;
         }
     });
     return 0;
@@ -894,7 +912,6 @@ std::string load_scgms_lib() {
 
 void init_config() {
     chain_configuration.emplace();
-
 }
 
 void inject_event(const scgms::NDevice_Event_Code &code, const GUID &signal_id, const wchar_t *info,
@@ -941,19 +958,23 @@ int add_one(int number) {
     return number + 1;
 }
 
-void print_filter_info(std::vector<FilterInfo> filters) {
+void print_filter_info(const FilterInfo &filter) {
+    std::cout << "Filter ID: " << filter.id << std::endl;
+    std::cout << "Filter Flags: " << filter.flags << std::endl;
+    std::cout << "Filter Description: " << filter.description << std::endl;
+    std::cout << "Filter Parameters Count: " << filter.parameters_count << std::endl;
+    for (const auto &param: filter.parameters) {
+        std::cout << "Parameter Type: " << param.parameter_type << std::endl;
+        std::cout << "UI Parameter Name: " << param.ui_parameter_name << std::endl;
+        std::cout << "Config Parameter Name: " << param.config_parameter_name << std::endl;
+        std::cout << "UI Parameter Tooltip: " << param.ui_parameter_tooltip << std::endl;
+        std::cout << "Default Value: " << param.default_value << std::endl;
+    }
+}
+
+void print_filters_info(std::vector<FilterInfo> filters) {
     for (const auto &filter: filters) {
-        std::cout << "Filter ID: " << filter.id << std::endl;
-        std::cout << "Filter Flags: " << filter.flags << std::endl;
-        std::cout << "Filter Description: " << filter.description << std::endl;
-        std::cout << "Filter Parameters Count: " << filter.parameters_count << std::endl;
-        for (const auto &param: filter.parameters) {
-            std::cout << "Parameter Type: " << param.parameter_type << std::endl;
-            std::cout << "UI Parameter Name: " << param.ui_parameter_name << std::endl;
-            std::cout << "Config Parameter Name: " << param.config_parameter_name << std::endl;
-            std::cout << "UI Parameter Tooltip: " << param.ui_parameter_tooltip << std::endl;
-            std::cout << "Default Value: " << param.default_value << std::endl;
-        }
+        print_filter_info(filter);
     }
 }
 
@@ -1058,65 +1079,30 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     m.def("get_logs", &get_logs, "Returns log lines from the filter chain");
 }
 
-bool are_filter_vectors_contents_equal(const std::vector<FilterInfo> &a, const std::vector<FilterInfo> &b) {
-    if (a.size() != b.size()) {
-        std::cout << "Filter vectors size mismatch: "
-                << a.size() << " vs " << b.size() << std::endl;
-        return false;
-    }
-    for (size_t i = 0; i < a.size(); ++i) {
-        if (a[i].id != b[i].id || a[i].flags != b[i].flags || a[i].description != b[i].description ||
-            a[i].parameters_count != b[i].parameters_count) {
-            std::cout << "Filter " << i << " mismatch: "
-                    << a[i].id << " vs " << b[i].id << std::endl;
-            return false;
-        }
-        for (size_t j = 0; j < a[i].parameters_count; ++j) {
-            if (a[i].parameters[j].parameter_type != b[i].parameters[j].parameter_type ||
-                a[i].parameters[j].ui_parameter_name != b[i].parameters[j].ui_parameter_name ||
-                a[i].parameters[j].config_parameter_name != b[i].parameters[j].config_parameter_name ||
-                a[i].parameters[j].ui_parameter_tooltip != b[i].parameters[j].ui_parameter_tooltip ||
-                a[i].parameters[j].default_value != b[i].parameters[j].default_value) {
-                std::cout << "Filter " << i << " parameter " << j << " mismatch: "
-                        << a[i].parameters[j].parameter_type << " vs "
-                        << b[i].parameters[j].parameter_type << std::endl;
-                return false;
-            }
-        }
-    }
-    return true;
+
+HRESULT IfaceCalling my_on_filter_created(scgms::IFilter* filter, const void* data) {
+    // tady můžeš testovat třeba, že filter != nullptr,
+    // nebo si ho uložit, ale pro teď jen vracíme S_OK
+    return S_OK;
 }
-
-bool are_svgs_equal(const std::vector<SvgInfo> &a, const std::vector<SvgInfo> &b) {
-    if (a.size() != b.size()) {
-        std::cout << "SVG vectors size mismatch: "
-                << a.size() << " vs " << b.size() << std::endl;
-        return false;
-    }
-    for (size_t i = 0; i < a.size(); ++i) {
-        if (a[i].id != b[i].id || a[i].name != b[i].name || a[i].svg_str != b[i].svg_str) {
-            std::cout << "SVG " << i << " mismatch: "
-                    << a[i].id << " vs " << b[i].id << std::endl;
-            std::cout << "SVG A str: " << a[i].svg_str << std::endl;
-            std::cout << "SVG B str: " << b[i].svg_str << std::endl;
-            return false;
-        }
-    }
-    return true;
-}
-
-std::string optimize_parameters(const std::vector<int>& filter_indices,
-                                const std::vector<std::string>& parameter_names,
-                                const std::string& solver_id_str,
-                                int population_size,
-                                int max_generations) {
-    if (filter_indices.size() != parameter_names.size()) {
-        return "Error: Mismatch in filter_indices and parameter_names size.";
-    }
-
-    if (population_size < 5 || max_generations < 1) {
-        return "Error: population_size must be >= 5 and max_generations >= 1.";
-    }
+// std::string optimize_parameters(const std::vector<int>& filter_indices,
+//                                 const std::vector<std::string>& parameter_names,
+//                                 const std::string& solver_id_str,
+//                                 int population_size,
+//                                 int max_generations) {
+std::string optimize_parameters() {
+    std::vector<int> filter_indices = {7, 10};
+    // std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"};
+    std::string solver_id_str = "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}"; // MetaDE solver
+    int population_size = 30;
+    int max_generations = 100;
+    // if (filter_indices.size() != parameter_names.size()) {
+    //     return "Error: Mismatch in filter_indices and parameter_names size.";
+    // }
+    //
+    // if (population_size < 5 || max_generations < 1) {
+    //     return "Error: population_size must be >= 5 and max_generations >= 1.";
+    // }
 
     bool ok;
     GUID solver_id = WString_To_GUID(Widen_String(solver_id_str), ok);
@@ -1124,27 +1110,39 @@ std::string optimize_parameters(const std::vector<int>& filter_indices,
 
     std::vector<size_t> filter_indices_sized(filter_indices.begin(), filter_indices.end());
 
-    std::vector<std::wstring> wide_parameter_names;
+    // wide_parameter_names.reserve(parameter_names.size());
+    // parameter_name_ptrs.reserve(parameter_names.size());
+    //
+    // for (const auto &name: parameter_names) {
+    //     wide_parameter_names.emplace_back(Widen_String(name));
+    // }
+    // for (const auto &wide: wide_parameter_names) {
+    //     parameter_name_ptrs.push_back(wide.c_str());
+    // }
+
+    std::vector<std::wstring> wide_parameter_names = {L"Model_Bounds", L"Parameters"};
     std::vector<const wchar_t*> parameter_name_ptrs;
-    for (const auto& name : parameter_names) {
-        wide_parameter_names.push_back(Widen_String(name));
-        parameter_name_ptrs.push_back(wide_parameter_names.back().c_str());
-    }
+    parameter_name_ptrs.reserve(wide_parameter_names.size());
+    for (auto &w : wide_parameter_names)
+        parameter_name_ptrs.push_back(w.c_str());
 
     refcnt::Swstr_list error_description;
+
+
     Global_Progress = solver::Null_Solver_Progress;
 
     std::cout << "[OPTIMIZE] Running Optimize_Parameters with:\n";
     std::cout << "- Filters: ";
-    for (auto idx : filter_indices) std::cout << idx << " ";
+    for (auto idx: filter_indices) std::cout << idx << " ";
     std::cout << "\n- Parameters: ";
-    for (const auto& p : parameter_names) std::cout << p << " ";
+    for (const auto &p: wide_parameter_names) std::wcout << p << " ";
     std::cout << "\n- Solver ID: " << solver_id_str << "\n";
-
+    std::cout << "- Population Size: " << population_size << "\n";
+    std::cout << "- Max Generations: " << max_generations << "\n";
 
 
     HRESULT res = scgms::Optimize_Parameters(
-    (*chain_configuration),
+        (*chain_configuration),
         filter_indices_sized.data(),
         parameter_name_ptrs.data(),
         filter_indices_sized.size(),
@@ -1173,6 +1171,10 @@ std::string optimize_parameters(const std::vector<int>& filter_indices,
 
 
 int main() {
+    if (load_scgms_lib() != "0") {
+        std::cerr << "Failed to load scgms library.\n";
+        return 1;
+    }
     chain_configuration.emplace();
     HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg1/config.ini", nullptr);
     if (!Succeeded(res)) {
@@ -1180,25 +1182,20 @@ int main() {
         return 1;
     }
 
-    execute();
+    // execute();
 
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    //
-    std::vector<int> filter_indices = {7, 10}; // Nahraď podle skutečných indexů
-    std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"}; // Pozor na správné pořadí a názvy
-    std::string solver_guid = "{1b21b62f-7c6c-4027-89bc-687d8bd32b3c}"; // MetaDE solver
+    // std::this_thread::sleep_for(std::chrono::seconds(3));
+    // //
+    insp_draw = {};
+    insp_log = {};
 
-    int population = 30;
-    int generations = 100;
+    std::string result = optimize_parameters();
 
-    std::string result = optimize_parameters(filter_indices, parameter_names, solver_guid, population, generations);
-
-    // if (result != "0") {
-    //     std::cerr << "Optimization failed:\n" << result << std::endl;
-    //     return 1;
-    // } else {
-    //     std::cout << "Optimization finished successfully.\n";
-    // }
+    if (result != "0") {
+        std::cerr << "Optimization failed:\n" << result << std::endl;
+        return 1;
+    }
+    std::cout << "Optimization finished successfully.\n";
 
 
     return 0;

@@ -1,5 +1,5 @@
 // apiConstants.js
-export const API_BASE_URL = "http://127.0.0.1:5000";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
 export const FETCH_FILTERS_URL = `${API_BASE_URL}/filters/fetch`;
 
 export const ADD_FILTER_URL = `${API_BASE_URL}/filters/add`;
@@ -11,6 +11,7 @@ export const EXECUTE_CONFIGURATION_URL = `${API_BASE_URL}/config/execute`;
 export const STOP_SIMULATION_URL = `${API_BASE_URL}/config/stop`;
 export const FETCH_SVGS_URL = `${API_BASE_URL}/config/fetch_svgs`;
 export const FETCH_LOGS_URL = `${API_BASE_URL}/config/fetch_logs`;
+export const IMPORT_CSV_FILES_URL = `${API_BASE_URL}/config/import_csv`;
 export const FETCH_CHAIN_FILTERS_URL = `${API_BASE_URL}/config/fetch_filters`;
 export const REMOVE_FILTER_URL = `${API_BASE_URL}/filters/remove`;
 export const MOVE_FILTER_UP_URL = `${API_BASE_URL}/filters/move_up`;

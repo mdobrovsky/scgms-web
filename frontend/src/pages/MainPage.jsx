@@ -109,6 +109,22 @@ function MainPage() {
         return list;
     }
 
+    const onDownload = async (fileName, fileContents) => {
+        // console.log("Downloading file:", fileName);
+        // console.log("File contents:", fileContents);
+        const blob = new Blob([fileContents], {type: "text/plain"});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        // console.log("File downloaded:", fileName);
+
+    }
+
 
     const handleStartButton = async () => {
         setLogs([]);
@@ -120,14 +136,14 @@ function MainPage() {
                     console.log("Execute Config Result:", result);
                     if (result === "0") {
                         const outputFilters = getOutputFilters();
-                        console.log("Output Filters:", outputFilters);
+                        // console.log("Output Filters:", outputFilters);
                         // drawing filter
 
                         const drawingFilter = outputFilters["Drawing filter v2"];
                         if (drawingFilter) {
-                            console.log("Drawing filter detected!");
+                            // console.log("Drawing filter detected!");
                             const svgs = await fetchSvgs();
-                            console.log("Fetched SVGs:", svgs);
+                            // console.log("Fetched SVGs:", svgs);
                             if (svgs) {
                                 setSvgs(svgs);
                                 setIsStartDisabled(true);
@@ -165,7 +181,7 @@ function MainPage() {
                         }
                         const logFilter = outputFilters["Log"];
                         if (logFilter) {
-                            console.log("Log filter detected!");
+                            // console.log("Log filter detected!");
                             const logs = await fetchLogs();
                             if (logs) {
                                 setLogs(logs);
@@ -410,7 +426,7 @@ function MainPage() {
             {activeTab === "simulation" && (
                 <SimulationPage handleStartButton={handleStartButton} handleStopButton={handleStopButton}
                                 isStartDisabled={isStartDisabled} isStopDisabled={isStopDisabled} svgs={svgs}
-                                logs={logs}/>
+                                logs={logs} onDownload={onDownload}/>
             )}
 
             {activeTab === "optimize" && (

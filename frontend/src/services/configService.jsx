@@ -2,7 +2,7 @@ import axios from "axios";
 import {
     EXECUTE_CONFIGURATION_URL,
     FETCH_CHAIN_FILTERS_URL,
-    FETCH_FILTERS_URL, FETCH_LOGS_URL, FETCH_SVGS_URL, INIT_CONFIGURATION_URL,
+    FETCH_FILTERS_URL, FETCH_LOGS_URL, FETCH_SVGS_URL, IMPORT_CSV_FILES_URL, INIT_CONFIGURATION_URL,
     LOAD_CONFIGURATION_URL,
     SAVE_CONFIGURATION_URL, STOP_SIMULATION_URL
 } from "../constants/apiConstants.jsx";
@@ -111,6 +111,33 @@ export const loadConfiguration = async (file, csvFiles) => {
         console.error("Error uploading file:", error);
     }
 
+}
+
+export const importCsvFiles = async (csvFiles) => {
+    try {
+        if (!csvFiles || csvFiles.length === 0) return;
+
+        const formData = new FormData();
+        for (let i = 0; i < csvFiles.length; i++) {
+            formData.append(`csv_files[${i}]`, csvFiles[i]);
+            formData.append(`csv_names[${i}]`, csvFiles[i].name);
+        }
+
+        const response = await axios.post(
+            IMPORT_CSV_FILES_URL,
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
+
+        // console.log("Server response:", response.data);
+        return response.data;
+    } catch (error) {
+        console.error("Error uploading file:", error);
+    }
 }
 
 export const fetchChainFilters = async () => {

@@ -52,8 +52,8 @@ build cmake_object_order_depends_target_scgms_wrapper: phony || .
 build CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o: CXX_COMPILER__scgms_wrapper_unscanned_Debug /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/scgms_wrapper.cpp || cmake_object_order_depends_target_scgms_wrapper
   DEFINES = -Dscgms_wrapper_EXPORTS
   DEP_FILE = CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o.d
-  FLAGS = -g -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk -fPIC -fcolor-diagnostics
-  INCLUDES = -I/usr/local/include/node -I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -I/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/include/python3.12 -I/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/common/scgms/rtl
+  FLAGS = -I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -g -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk -fPIC -fcolor-diagnostics
+  INCLUDES = -I/usr/local/include/node -I/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/include/python3.12 -I/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/common/scgms/rtl
   OBJECT_DIR = CMakeFiles/scgms_wrapper.dir
   OBJECT_FILE_DIR = CMakeFiles/scgms_wrapper.dir
 
@@ -67,7 +67,7 @@ build CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o: CXX_COMPILER__scgms_wrap
 
 build /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so: CXX_MODULE_LIBRARY_LINKER__scgms_wrapper_Debug CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o | /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib
   ARCH_FLAGS = -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk
-  LANGUAGE_COMPILE_FLAGS = -g
+  LANGUAGE_COMPILE_FLAGS = -I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -g
   LINK_LIBRARIES = -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib -Wl,-rpath,/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib  -lpython3.12
   LINK_PATH = -L/usr/local/lib   -L/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib   -L/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled
   OBJECT_DIR = CMakeFiles/scgms_wrapper.dir
@@ -88,8 +88,8 @@ build cmake_object_order_depends_target_scgms_wrapper_debug: phony || .
 build CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o: CXX_COMPILER__scgms_wrapper_debug_unscanned_Debug /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/scgms_wrapper.cpp || cmake_object_order_depends_target_scgms_wrapper_debug
   DEFINES = -DCOMPILE_AS_EXECUTABLE
   DEP_FILE = CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o.d
-  FLAGS = -g -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk -fcolor-diagnostics
-  INCLUDES = -I/usr/local/include/node -I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -I/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/include/python3.12 -I/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/common/scgms/rtl
+  FLAGS = -I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -g -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk -fcolor-diagnostics
+  INCLUDES = -I/usr/local/include/node -I/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/include/python3.12 -I/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/common/scgms/rtl
   OBJECT_DIR = CMakeFiles/scgms_wrapper_debug.dir
   OBJECT_FILE_DIR = CMakeFiles/scgms_wrapper_debug.dir
 
@@ -102,7 +102,7 @@ build CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o: CXX_COMPILER__scgm
 # Link the executable scgms_wrapper_debug
 
 build scgms_wrapper_debug: CXX_EXECUTABLE_LINKER__scgms_wrapper_debug_Debug CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o | /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib
-  FLAGS = -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk
+  FLAGS = -I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.0.sdk
   LINK_LIBRARIES = -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib -Wl,-rpath,/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms-common.a  /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled/libscgms.dylib  -lpython3.12
   LINK_PATH = -L/usr/local/lib   -L/opt/homebrew/opt/python@3.12/Frameworks/Python.framework/Versions/3.12/lib   -L/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/../scgms-release/build/compiled
   OBJECT_DIR = CMakeFiles/scgms_wrapper_debug.dir

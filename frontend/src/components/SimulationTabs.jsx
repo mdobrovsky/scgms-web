@@ -1,9 +1,9 @@
-import {Container, Tabs, Tab} from "react-bootstrap";
+import {Container, Tabs, Tab, Button} from "react-bootstrap";
 import PropTypes from "prop-types";
 import {useRef, useState} from "react";
 
-export const SimulationTabs = ({svgs, logs}) => {
-    console.log("logs:",logs)
+export const SimulationTabs = ({svgs, logs, onDownload}) => {
+    // console.log("logs:", logs)
     return (
         <Container className="p-1">
             <Tabs defaultActiveKey={svgs.length > 0 ? "0" : "logs"} id="svg-tabs" className="mb-3">
@@ -13,11 +13,26 @@ export const SimulationTabs = ({svgs, logs}) => {
                         title={svg.name || `Graf ${index + 1}`}
                         key={index}
                     >
-                        <DraggableSvg svgHtml={svg.svg_str}/>
+                        <div className="d-flex flex-column align-items-center mb-3">
+                            {/*<Button variant="outline-dark" className="mb-2">*/}
+                            {/*    Download*/}
+                            {/*</Button>*/}
+                            <DraggableSvg svgHtml={svg.svg_str}
+                                          onDownload={() => onDownload(svg.name + ".svg", svg.svg_str)}/>
+                        </div>
+
                     </Tab>
                 ))}
                 {logs && logs.length > 0 && (
-                    <Tab eventKey="logs" title={`Logs (${logs.length})`} key="logs">
+
+                    <Tab className="shadow" eventKey="logs" title={`Logs (${logs.length})`} key="logs">
+                        <Button
+                            variant="outline-dark"
+                            onClick={() => onDownload("log.csv", logs)}
+                            className="container"
+                        >
+                            Download
+                        </Button>
                         <div style={{
                             maxHeight: "600px",
                             overflowY: "auto",
@@ -27,9 +42,11 @@ export const SimulationTabs = ({svgs, logs}) => {
                             fontSize: "0.85rem",
                             whiteSpace: "pre-wrap"
                         }}>
+
                             {logs.map((log, i) => (
                                 <div key={i}>{log}</div>
                             ))}
+
                         </div>
                     </Tab>
                 )}
@@ -38,7 +55,7 @@ export const SimulationTabs = ({svgs, logs}) => {
     );
 };
 
-const DraggableSvg = ({svgHtml}) => { // TODO probably add scaling
+const DraggableSvg = ({svgHtml, onDownload}) => { // TODO probably add scaling
     const wrapperRef = useRef(null);
     const innerRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -81,6 +98,7 @@ const DraggableSvg = ({svgHtml}) => { // TODO probably add scaling
                 margin: "0 auto"
             }}
         >
+
             <div
                 ref={innerRef}
                 style={{
@@ -95,6 +113,14 @@ const DraggableSvg = ({svgHtml}) => { // TODO probably add scaling
                 }}
                 dangerouslySetInnerHTML={{__html: svgHtml}}
             />
+            <Button
+                variant="outline-dark"
+                size="sm"
+                onClick={onDownload}
+                className="position-absolute top-0 end-0 m-2"
+            >
+                Download
+            </Button>
         </div>
     );
 };

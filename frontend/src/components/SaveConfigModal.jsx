@@ -1,5 +1,6 @@
 import React from "react";
 import {Modal, Button, Container, Form, InputGroup} from "react-bootstrap";
+import PropTypes from "prop-types";
 
 const SaveConfigModal = ({show, onClose, onSave, fileName, setFileName, fileNameError, setFileNameError}) => {
     const validateFileName = (name) => {
@@ -52,5 +53,15 @@ const SaveConfigModal = ({show, onClose, onSave, fileName, setFileName, fileName
         </Modal>
     );
 };
+
+SaveConfigModal.propTypes = {
+    show: PropTypes.bool.isRequired,
+    onClose: PropTypes.func.isRequired,
+    onSave: PropTypes.func.isRequired,
+    fileName: PropTypes.string.isRequired,
+    setFileName: PropTypes.func.isRequired,
+    fileNameError: PropTypes.string,
+    setFileNameError: PropTypes.func.isRequired,
+}
 
 export default SaveConfigModal;

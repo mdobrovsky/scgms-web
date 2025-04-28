@@ -1,8 +1,9 @@
 import {Form} from "react-bootstrap";
 import PropTypes from "prop-types";
-import {useEffect} from "react";
+import React, {useEffect} from "react";
 import convertDoubleToTime from "../services/utils";
 import TimeWithDaysInput from "./TimeWithDaysInput.jsx";
+
 const pad = (num) => String(num).padStart(2, "0");
 
 function getOnChangeParameter(setFilter, parameter) {
@@ -18,9 +19,10 @@ function getOnChangeParameter(setFilter, parameter) {
     };
 }
 
+
 const ParameterInput = ({
                             parameter, signals, models, solvers, metrics,
-                            selectedModel, setSelectedModel, setFilter, filter
+                            selectedModel, setSelectedModel, setFilter, filter, setCsvFiles
                         }) => {
 
         const selectedModelId = filter.parameters.find((p) =>
@@ -38,6 +40,12 @@ const ParameterInput = ({
             }));
         }
 
+        const handleFileChange = (files) => {
+            const csvFiles = Array.from(files).filter(file => file.name.endsWith('.csv'));
+            if (csvFiles.length > 0) {
+                setCsvFiles(csvFiles);
+            }
+        }
 
 
         useEffect(() => {
@@ -66,7 +74,7 @@ const ParameterInput = ({
 
             case "ptRatTime": {
                 return <TimeWithDaysInput onChange={onChangeTime} value={parameter.value} step={1}
-                                            id={parameter.config_parameter_name} name={parameter.config_parameter_name}
+                                          id={parameter.config_parameter_name} name={parameter.config_parameter_name}
                 />
             }
 
@@ -77,6 +85,19 @@ const ParameterInput = ({
                                      onChange={getOnChangeParameter(setFilter, parameter)}
                 />;
             case "ptWChar_Array":
+                if (filter.description === "CSV File Log Replay") {
+                    return <>
+                        <Form.Control id={parameter.config_parameter_name} type="text"
+                                      name={parameter.config_parameter_name} defaultValue={parameter.value}
+                                      onChange={getOnChangeParameter(setFilter, parameter)}
+                        />
+                        <Form.Group controlId="formFile" className="mb-3">
+                            <Form.Control type="file" multiple onChange={(e) =>
+                                handleFileChange(e.target.files)}/>
+                        </Form.Group>
+                    </>
+                        ;
+                }
                 return <Form.Control id={parameter.config_parameter_name} type="text"
                                      name={parameter.config_parameter_name} defaultValue={parameter.value}
                                      onChange={getOnChangeParameter(setFilter, parameter)}

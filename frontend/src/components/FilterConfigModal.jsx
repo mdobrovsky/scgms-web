@@ -5,6 +5,7 @@ import {useRef, useEffect, useState} from "react";
 import {configureFilter} from "../services/filterService";
 import ModelBoundsEditableTable from "./ModelBoundsEditableTable.jsx";
 import {toast} from 'react-toastify';
+import {importCsvFiles} from "../services/configService.jsx";
 
 const FilterConfigModal = ({
                                filter, setFilter, show, onClose, signals, models, metrics,
@@ -15,6 +16,7 @@ const FilterConfigModal = ({
     const [activeTab, setActiveTab] = useState("parameters");
     const [disableModelBoundsNav, setDisableModelBoundsNav] = useState(true);
     const [secondTabName, setSecondTabName] = useState("");
+    const [csvFiles, setCsvFiles] = useState([]);
     useEffect(() => {
         if (selectedModel) {
             setDisableModelBoundsNav(false);
@@ -37,6 +39,12 @@ const FilterConfigModal = ({
         })
     }, [filter]);
 
+    const handleClose = () => {
+        setActiveTab("parameters");
+        setSelectedModel(null);
+        setDisableModelBoundsNav(true);
+        onClose();
+    }
 
     if (!filter) return null;
 
@@ -102,7 +110,7 @@ const FilterConfigModal = ({
         const updatedFilter = {...filter, parameters: newParameters};
 
         setSelectedFilters((prevFilters) =>
-            prevFilters.map((f) => (f.id === updatedFilter.id ? updatedFilter : f))
+            prevFilters.map((f) => (f.index === updatedFilter.index ? updatedFilter : f))
         );
 
         setFilter(updatedFilter);
@@ -112,9 +120,15 @@ const FilterConfigModal = ({
         await toast.promise(
             new Promise(async (resolve, reject) => {
                 try {
+                    if (csvFiles.length > 0) {
+                        const csvResult = await importCsvFiles(csvFiles);
+                        console.log("CSV import result:", csvResult);
+                    }
                     const result = await configureFilter(updatedFilter);
                     if (result === "0") {
                         resolve("Filter configured successfully!");
+
+
                     } else {
                         reject(new Error("Error configuring filter"));
                     }
@@ -142,7 +156,7 @@ const FilterConfigModal = ({
     };
 
     return (
-        <Modal size="lg" show={show} onHide={onClose}>
+        <Modal size="lg" show={show} onHide={handleClose}>
             <Modal.Header closeButton>
                 <Modal.Title>Configure <b>{filter.description}</b></Modal.Title>
             </Modal.Header>
@@ -182,6 +196,7 @@ const FilterConfigModal = ({
                                                     setSelectedModel={setSelectedModel}
                                                     setFilter={setFilter}
                                                     filter={filter}
+                                                    setCsvFiles={setCsvFiles}
                                                 />
                                                 <Form.Text id={parameter.ui_parameter_name} muted>
                                                     {parameter.parameter_type}
