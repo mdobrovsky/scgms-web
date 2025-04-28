@@ -86,6 +86,30 @@ def execute():
     result = execute_service()
     return jsonify({"result": result})
 
+@config_bp.route("/import_csv", methods=["POST"])
+def import_csv_files():
+    # print(request.form)
+    csv_files = []
+    i = 0
+    while True:
+        key = f'csv_files[{i}]'
+        print("key: ", key)
+        if key in request.files:
+            print("request.files[key]: ", request.files[key])
+            csv_file = request.files[key]
+            csv_files.append(csv_file)
+            i += 1
+        else:
+            break
+    for csv_file in csv_files:
+        print("csv_file: ", csv_file)
+        csv_file_name = csv_file.filename
+        csv_file_path = os.path.join("./", csv_file_name)
+        csv_file.save(csv_file_path)
+
+    return jsonify({"result": "0"})
+
+
 @config_bp.route("/stop", methods=["GET"])
 def stop():
     result = stop_service()

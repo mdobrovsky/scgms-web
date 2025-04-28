@@ -17,9 +17,9 @@ export const SimulationPage = ({
                 <Col md={2}>
                     <div className="d-flex flex-column gap-2">
                         <Button variant="outline-dark" disabled={isStartDisabled}
-                                onClick={handleStartButton}>Start</Button>
+                                onClick={handleStartButton}><i className="bi-play"></i> Start</Button>
                         <Button variant="outline-dark" disabled={isStopDisabled}
-                                onClick={handleStopButton}>Stop</Button>
+                                onClick={handleStopButton}><i className="bi-stop"></i> Stop</Button>
                     </div>
                 </Col>
 

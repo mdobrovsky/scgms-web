@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import {Container, Row, Col, Nav, Dropdown, Modal, Form, Button} from "react-bootstrap";
 import AvailableFilterList from "../components/AvailableFilterList.jsx";
 import FilterConfigModal from "../components/FilterConfigModal";
@@ -385,10 +385,10 @@ function MainPage() {
             <Nav fill variant="tabs" activeKey={activeTab} className="mb-3 mt-4"
                  onSelect={(selectedKey) => setActiveTab(selectedKey)}>
                 <Nav.Item>
-                    <Nav.Link eventKey="configuration">Configuration</Nav.Link>
+                    <Nav.Link eventKey="configuration"><i className="bi-gear"></i> Configuration</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
-                    <Nav.Link eventKey="simulation" disabled={disableModelBoundsNav}>Simulation</Nav.Link>
+                    <Nav.Link eventKey="simulation" disabled={disableModelBoundsNav}><i className="bi-hourglass"></i>  Simulation</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
                     <Nav.Link eventKey="optimize" disabled={disableModelBoundsNav}>Optimize parameters</Nav.Link>
@@ -402,8 +402,15 @@ function MainPage() {
                         </Dropdown.Toggle>
 
                         <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => setShowSaveModal(true)}>Save</Dropdown.Item>
-                            <Dropdown.Item onClick={() => setShowLoadModal(true)}>Load</Dropdown.Item>
+                            <Dropdown.Item onClick={() => setShowSaveModal(true)} className="d-flex align-items-center">
+                                Save
+                                <i className="bi bi-download ms-auto"></i>
+                            </Dropdown.Item>
+
+                            <Dropdown.Item onClick={() => setShowLoadModal(true)} className="d-flex align-items-center">
+                                Load
+                                <i className="bi bi-upload ms-auto"></i>
+                            </Dropdown.Item>
                         </Dropdown.Menu>
                     </Dropdown>
                     <Row className="align-items-stretch gap-3 flex-lg-nowrap">

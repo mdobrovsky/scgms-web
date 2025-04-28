@@ -1,5 +1,5 @@
 import React from "react";
-import {Modal, Button, Container, Form, InputGroup} from "react-bootstrap";
+import {Modal, Button, Container, Form} from "react-bootstrap";
 import PropTypes from "prop-types";
 
 const LoadConfigModal = ({show, onClose, setConfigFile, setCsvFiles, onLoad}) => {

@@ -81,26 +81,26 @@ const SelectedFilterList = ({
             <ButtonGroup className="mt-2 d-flex flex-column flex-lg-row">
                 <Button variant="outline-dark" onClick={handleMoveFilterUp}
                         disabled={selectedFilter === null}>
-                    Move up
+                    <i className="bi-arrow-up"></i> Move up
                 </Button>
                 <Button variant="outline-dark" onClick={handleMoveFilterDown}
                         disabled={selectedFilter === null}>
-                    Move down
+                    <i className="bi-arrow-down"></i> Move down
                 </Button>
 
             </ButtonGroup>
             <ButtonGroup className="mt-3 d-flex flex-column flex-lg-row">
                 <Button variant="outline-dark" onClick={handleConfigureFilter}
                         disabled={selectedFilter === null}>
-                    Configure
+                    <i className="bi-wrench"></i> Configure
                 </Button>
                 <Button variant="outline-dark" onClick={() => handleRemoveFilter2(selectedFilter)}
                         disabled={selectedFilter === null}>
-                    Remove
+                    <i className="bi-x"></i> Remove
                 </Button>
                 <Button variant="outline-dark" onClick={handleRemoveAllFilters2}
                         disabled={filters.length === 0}>
-                    Remove All
+                    <i className="bi-x-circle"></i> Remove All
                 </Button>
 
             </ButtonGroup>

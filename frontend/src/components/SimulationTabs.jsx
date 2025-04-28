@@ -125,6 +125,11 @@ const DraggableSvg = ({svgHtml, onDownload}) => { // TODO probably add scaling
     );
 };
 
+DraggableSvg.propTypes = {
+    svgHtml: PropTypes.string.isRequired,
+    onDownload: PropTypes.func.isRequired,
+}
+
 SimulationTabs.propTypes = {
     svgs: PropTypes.arrayOf(
         PropTypes.shape({
@@ -133,4 +138,5 @@ SimulationTabs.propTypes = {
         })
     ).isRequired,
     logs: PropTypes.arrayOf(PropTypes.string),
+    onDownload: PropTypes.func.isRequired,
 };

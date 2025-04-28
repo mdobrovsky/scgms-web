@@ -1,7 +1,7 @@
 import {Modal, Button, Container, Row, Col, Form, Spinner, Nav} from "react-bootstrap";
 import ParameterInput from "./ParameterInput";
 import PropTypes from "prop-types";
-import {useRef, useEffect, useState} from "react";
+import React, {useRef, useEffect, useState} from "react";
 import {configureFilter} from "../services/filterService";
 import ModelBoundsEditableTable from "./ModelBoundsEditableTable.jsx";
 import {toast} from 'react-toastify';
@@ -222,7 +222,8 @@ const FilterConfigModal = ({
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose}>Close</Button>
                 <Button variant="outline-dark" onClick={handleSaveChanges}>
-                    Save changes {loading && <Spinner animation="border" role="status" size="sm"/>}
+                    <i className="bi-save"></i> Save changes {loading &&
+                    <Spinner animation="border" role="status" size="sm"/>}
 
                 </Button>
             </Modal.Footer>
