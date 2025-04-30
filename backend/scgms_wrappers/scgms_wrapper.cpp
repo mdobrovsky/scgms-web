@@ -33,13 +33,12 @@
 #include "../scgms-release/common/scgms/utils/string_utils.h"
 
 
-solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress; // so that we can cancel from sigint
+solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress;
 scgms::SFilter_Executor Global_Filter_Executor;
 //
 std::optional<scgms::SPersistent_Filter_Chain_Configuration> chain_configuration;
 
 static std::vector<std::wstring> wide_parameter_names;
-static std::vector<const wchar_t *> parameter_name_ptrs;
 
 
 scgms::SDrawing_Filter_Inspection_v2 insp_draw;
@@ -118,6 +117,13 @@ struct SvgInfo {
     std::string id;
     std::string name;
     std::string svg_str;
+};
+
+struct SolverProgressInfo {
+    std::string current_progress;
+    std::string max_progress;
+    std::string best_metric;
+    std::string status;
 };
 
 std::vector<SvgInfo> svgs;
@@ -596,17 +602,12 @@ void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, 
 std::vector<FilterInfo> get_available_filters() {
     const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
     std::vector<FilterInfo> filters;
-    // chain_configuration.emplace();
-
-
-    // Iterate through all filters
     for (size_t i = 0; i < filter_list.size(); ++i) {
         const scgms::TFilter_Descriptor &filter = filter_list[i];
         FilterInfo info;
         convert_filter_descriptor_to_info(filter, info);
         filters.push_back(info);
     }
-
     return filters;
 }
 
@@ -798,7 +799,7 @@ void retrieve_logs() {
     }
 }
 
-void monitor_drawing_updates_loop() {
+void monitor_output_updates() {
     uint64_t previous_clock = 0;
 
     while (true) {
@@ -868,7 +869,7 @@ std::string execute() {
             std::cout << "[EXECUTE] Starting monitor thread..." << std::endl;
             stop_monitor_thread.store(false);
 
-            monitor_thread = std::thread(monitor_drawing_updates_loop);
+            monitor_thread = std::thread(monitor_output_updates);
             std::cout << "[EXECUTE] Monitor thread started." << std::endl;
         } else {
             std::cout << "[EXECUTE] Insp not set! Drawing filter not detected." << std::endl;
@@ -978,6 +979,144 @@ void print_filters_info(std::vector<FilterInfo> filters) {
     }
 }
 
+
+std::string optimize_parameters(const std::vector<int> &filter_indices,
+                                const std::vector<std::string> &parameter_names,
+                                const std::string &solver_id_str,
+                                int population_size,
+                                int max_generations) {
+    // std::vector<int> filter_indices = {8};
+    // // std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"};
+    // std::string solver_id_str = "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}"; // MetaDE solver
+    // int population_size = 20;
+    // int max_generations = 100;
+    // if (filter_indices.size() != parameter_names.size()) {
+    //     return "Error: Mismatch in filter_indices and parameter_names size.";
+    // }
+    //
+    // if (population_size < 5 || max_generations < 1) {
+    //     return "Error: population_size must be >= 5 and max_generations >= 1.";
+    // }
+
+    bool ok;
+    GUID solver_id = WString_To_GUID(Widen_String(solver_id_str), ok);
+    if (!ok) return "Error: Invalid solver GUID.";
+
+    std::vector<size_t> filter_indices_sized(filter_indices.begin(), filter_indices.end());
+
+    // wide_parameter_names.reserve(parameter_names.size());
+    // parameter_name_ptrs.reserve(parameter_names.size());
+    //
+    // for (const auto &name: parameter_names) {
+    //     wide_parameter_names.emplace_back(Widen_String(name));
+    // }
+    // for (const auto &wide: wide_parameter_names) {
+    //     parameter_name_ptrs.push_back(wide.c_str());
+    // }
+
+
+    std::vector<const wchar_t *> parameter_name_ptrs;
+    std::vector<std::wstring> wide_parameter_names;
+    parameter_name_ptrs.reserve(parameter_names.size());
+    wide_parameter_names.reserve(parameter_names.size());
+    for (const auto &name: parameter_names) {
+        wide_parameter_names.emplace_back(Widen_String(name));
+    }
+    for (const auto &wide: wide_parameter_names) {
+        parameter_name_ptrs.push_back(wide.c_str());
+    }
+
+
+    refcnt::Swstr_list error_description;
+
+
+    Global_Progress = solver::Null_Solver_Progress;
+
+    std::cout << "[OPTIMIZE] Running Optimize_Parameters with:\n";
+    std::cout << "- Filters: ";
+    for (auto idx: filter_indices) std::cout << idx << " ";
+    std::cout << "\n- Parameters: ";
+    for (const auto &p: wide_parameter_names) std::wcout << p << " ";
+    std::cout << "\n- Solver ID: " << solver_id_str << "\n";
+    std::cout << "- Population Size: " << population_size << "\n";
+    std::cout << "- Max Generations: " << max_generations << "\n";
+
+
+    HRESULT res = scgms::Optimize_Parameters(
+        (*chain_configuration),
+        filter_indices_sized.data(),
+        parameter_name_ptrs.data(),
+        filter_indices_sized.size(),
+        nullptr, nullptr, // Setup callback, On_Filter_Created
+        solver_id,
+        population_size,
+        max_generations,
+        nullptr, 0, // Hints
+        Global_Progress,
+        error_description
+    );
+
+    if (!Succeeded(res)) {
+        std::string err_msg = "Optimization failed:\n";
+        error_description.for_each([&err_msg](const std::wstring &msg) {
+            err_msg += Narrow_WString(msg) + "\n";
+        });
+        return err_msg;
+    }
+
+    return "0"; // success
+}
+
+void print_solver_progress_loop() {
+    std::cout << "[PROGRESS] Initiating monitor solving update ...\n";
+
+    while (!Global_Progress.cancelled) {
+        std::cout << "Generation: " << Global_Progress.current_progress << " / " << Global_Progress.max_progress <<
+                "\n";
+        std::cout << "Best metric: ";
+        if (Global_Progress.best_metric[0] != 0) {
+            std::cout << Global_Progress.best_metric[0] << "\n";
+        } else {
+            std::cout << "N/A\n";
+        }
+
+        std::cout << "Status: " << ("Ongoing") << "\n\n";
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+    std::cout << "Generation: " << Global_Progress.current_progress << " / " << Global_Progress.max_progress << "\n";
+    std::cout << "Best metric: ";
+    if (Global_Progress.best_metric[0] != 0) {
+        std::cout << Global_Progress.best_metric[0] << "\n";
+    } else {
+        std::cout << "N/A\n";
+    }
+
+    std::cout << "Status: " << ("Stopped") << "\n\n";
+
+    std::cout << "[PROGRESS] Monitoring ended.\n";
+}
+
+SolverProgressInfo get_solver_progress_info() {
+    SolverProgressInfo info;
+    info.current_progress = std::to_string(Global_Progress.current_progress);
+    info.max_progress = std::to_string(Global_Progress.max_progress);
+    info.best_metric = Global_Progress.best_metric[0];
+    info.status = Global_Progress.cancelled ? "Cancelled" : "Ongoing";
+    return info;
+}
+
+std::string stop_optimization() {
+    if (Global_Progress.cancelled) {
+        std::cout << "[STOP] Optimization already cancelled." << std::endl;
+        return "0";
+    }
+    Global_Progress.cancelled = true;
+    std::cout << "[STOP] Optimization cancelled." << std::endl;
+    return "0";
+}
+
+
 PYBIND11_MAKE_OPAQUE(std::vector<FilterInfo>);
 
 PYBIND11_MODULE(scgms_wrapper, m) {
@@ -1077,93 +1216,19 @@ PYBIND11_MODULE(scgms_wrapper, m) {
     py::bind_vector<std::vector<SvgInfo> >(m, "SvgInfoVector");
     m.def("get_svgs", &get_svgs, "Returns SVGs from the filter chain");
     m.def("get_logs", &get_logs, "Returns log lines from the filter chain");
-}
 
+    // Binding for SolverInfo
+    py::class_<SolverProgressInfo>(m, "SolverProgressInfo")
+            .def_readonly("current_progress", &SolverProgressInfo::current_progress)
+            .def_readonly("max_progress", &SolverProgressInfo::max_progress)
+            .def_readonly("best_metric", &SolverProgressInfo::best_metric)
+            .def_readonly("status", &SolverProgressInfo::status);
+    py::bind_vector<std::vector<SolverProgressInfo> >(m, "SolverProgressInfoVector");
+    m.def("get_solver_progress_info", &get_solver_progress_info, "Returns solver progress information");
 
-HRESULT IfaceCalling my_on_filter_created(scgms::IFilter* filter, const void* data) {
-    // tady můžeš testovat třeba, že filter != nullptr,
-    // nebo si ho uložit, ale pro teď jen vracíme S_OK
-    return S_OK;
-}
-// std::string optimize_parameters(const std::vector<int>& filter_indices,
-//                                 const std::vector<std::string>& parameter_names,
-//                                 const std::string& solver_id_str,
-//                                 int population_size,
-//                                 int max_generations) {
-std::string optimize_parameters() {
-    std::vector<int> filter_indices = {7, 10};
-    // std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"};
-    std::string solver_id_str = "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}"; // MetaDE solver
-    int population_size = 30;
-    int max_generations = 100;
-    // if (filter_indices.size() != parameter_names.size()) {
-    //     return "Error: Mismatch in filter_indices and parameter_names size.";
-    // }
-    //
-    // if (population_size < 5 || max_generations < 1) {
-    //     return "Error: population_size must be >= 5 and max_generations >= 1.";
-    // }
-
-    bool ok;
-    GUID solver_id = WString_To_GUID(Widen_String(solver_id_str), ok);
-    if (!ok) return "Error: Invalid solver GUID.";
-
-    std::vector<size_t> filter_indices_sized(filter_indices.begin(), filter_indices.end());
-
-    // wide_parameter_names.reserve(parameter_names.size());
-    // parameter_name_ptrs.reserve(parameter_names.size());
-    //
-    // for (const auto &name: parameter_names) {
-    //     wide_parameter_names.emplace_back(Widen_String(name));
-    // }
-    // for (const auto &wide: wide_parameter_names) {
-    //     parameter_name_ptrs.push_back(wide.c_str());
-    // }
-
-    std::vector<std::wstring> wide_parameter_names = {L"Model_Bounds", L"Parameters"};
-    std::vector<const wchar_t*> parameter_name_ptrs;
-    parameter_name_ptrs.reserve(wide_parameter_names.size());
-    for (auto &w : wide_parameter_names)
-        parameter_name_ptrs.push_back(w.c_str());
-
-    refcnt::Swstr_list error_description;
-
-
-    Global_Progress = solver::Null_Solver_Progress;
-
-    std::cout << "[OPTIMIZE] Running Optimize_Parameters with:\n";
-    std::cout << "- Filters: ";
-    for (auto idx: filter_indices) std::cout << idx << " ";
-    std::cout << "\n- Parameters: ";
-    for (const auto &p: wide_parameter_names) std::wcout << p << " ";
-    std::cout << "\n- Solver ID: " << solver_id_str << "\n";
-    std::cout << "- Population Size: " << population_size << "\n";
-    std::cout << "- Max Generations: " << max_generations << "\n";
-
-
-    HRESULT res = scgms::Optimize_Parameters(
-        (*chain_configuration),
-        filter_indices_sized.data(),
-        parameter_name_ptrs.data(),
-        filter_indices_sized.size(),
-        nullptr, nullptr, // Setup callback, On_Filter_Created
-        solver_id,
-        population_size,
-        max_generations,
-        nullptr, 0, // Hints
-        Global_Progress,
-        error_description
-    );
-
-    if (!Succeeded(res)) {
-        std::string err_msg = "Optimization failed:\n";
-        error_description.for_each([&err_msg](const std::wstring &msg) {
-            err_msg += Narrow_WString(msg) + "\n";
-        });
-        return err_msg;
-    }
-
-    return "0"; // success
+    m.def("optimize_parameters", &optimize_parameters,
+          "Optimizes parameters using the specified solver and filter indices");
+    m.def("stop_optimization", &stop_optimization, "Stops the optimization process");
 }
 
 
@@ -1176,7 +1241,7 @@ int main() {
         return 1;
     }
     chain_configuration.emplace();
-    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg1/config.ini", nullptr);
+    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", nullptr);
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
         return 1;
@@ -1189,14 +1254,24 @@ int main() {
     insp_draw = {};
     insp_log = {};
 
-    std::string result = optimize_parameters();
+    std::thread solver_thread([]() {
+        std::string result = optimize_parameters(
+            {8}, // filter indices
+            {"Parameters"}, // parameter names
+            "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}", // solver ID
+            20, // population size
+            100 // max generations
+        );
+        if (result != "0") {
+            std::cerr << "[SOLVER] Chyba: " << result << std::endl;
+        } else {
+            std::cout << "[SOLVER] Optimalizace dokončena úspěšně." << std::endl;
+            Global_Progress.cancelled = true;
+        }
+    });
+    print_solver_progress_loop();
 
-    if (result != "0") {
-        std::cerr << "Optimization failed:\n" << result << std::endl;
-        return 1;
-    }
-    std::cout << "Optimization finished successfully.\n";
-
+    solver_thread.join();
 
     return 0;
 }

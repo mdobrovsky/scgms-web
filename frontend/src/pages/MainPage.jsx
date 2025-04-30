@@ -154,7 +154,6 @@ function MainPage() {
                             const drawIntervalId = setInterval(async () => {
                                 try {
                                     const new_svgs = await fetchSvgs();
-
                                     // SVGS
                                     let svgsChanged = false;
                                     if (svgs?.length !== new_svgs.length) {
@@ -169,9 +168,7 @@ function MainPage() {
                                     }
                                     if (svgsChanged) {
                                         setSvgs(new_svgs);
-                                        // console.log("Updated SVGs:", new_svgs);
                                     }
-
                                 } catch (err) {
                                     console.error("Error while fetching SVGs:", err);
                                 }

@@ -10,6 +10,7 @@ import {
 export const fetchFilters = async () => {
     try {
         const response = await axios.get(FETCH_FILTERS_URL);
+        // return alphabetically sorted filters
         return response.data.filters.sort((a, b) => a.description.localeCompare(b.description));
     } catch (error) {
         console.error("Error fetching filters:", error);
