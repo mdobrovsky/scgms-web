@@ -20,3 +20,6 @@ export const FETCH_SIGNALS_URL = `${API_BASE_URL}/signals/fetch`;
 export const FETCH_MODELS_URL = `${API_BASE_URL}/models/fetch`;
 export const FETCH_SOLVERS_URL = `${API_BASE_URL}/solvers/fetch`;
 export const FETCH_METRICS_URL = `${API_BASE_URL}/metrics/fetch`;
+export const SOLVE_URL = `${API_BASE_URL}/optimization/solve`;
+export const FETCH_SOLVER_PROGRESS_URL = `${API_BASE_URL}/optimization/fetch_progress`;
+export const STOP_OPTIMIZATION_URL = `${API_BASE_URL}/optimization/stop`;

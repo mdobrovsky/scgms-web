@@ -33,7 +33,10 @@
 #include "../scgms-release/common/scgms/utils/string_utils.h"
 
 
+std::atomic<bool> optimizing_flag{ true };
 solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress;
+
+
 scgms::SFilter_Executor Global_Filter_Executor;
 //
 std::optional<scgms::SPersistent_Filter_Chain_Configuration> chain_configuration;
@@ -127,6 +130,7 @@ struct SolverProgressInfo {
 };
 
 std::vector<SvgInfo> svgs;
+SolverProgressInfo progress_info;
 
 
 MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
@@ -979,41 +983,41 @@ void print_filters_info(std::vector<FilterInfo> filters) {
     }
 }
 
+void convert_to_global_progress_info(solver::TSolver_Progress &progress) {
+    SolverProgressInfo info;
+    info.current_progress = std::to_string(progress.current_progress);
+    info.max_progress = std::to_string(progress.max_progress);
+    // convert best_metric to string
+    info.best_metric = std::to_string(progress.best_metric[0]);
+    info.status = progress.cancelled ? "Cancelled" : "Ongoing";
+    progress_info = info;
+    std::cout << "[PROGRESS] Current progress: " << info.current_progress << std::endl;
+    std::cout << "[PROGRESS] Max progress: " << info.max_progress << std::endl;
+    std::cout << "[PROGRESS] Best metric: " << info.best_metric << std::endl;
+    std::cout << "[PROGRESS] Status: " << info.status << std::endl;
+}
+
 
 std::string optimize_parameters(const std::vector<int> &filter_indices,
                                 const std::vector<std::string> &parameter_names,
                                 const std::string &solver_id_str,
                                 int population_size,
                                 int max_generations) {
-    // std::vector<int> filter_indices = {8};
-    // // std::vector<std::string> parameter_names = {"Model_Bounds", "Parameters"};
-    // std::string solver_id_str = "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}"; // MetaDE solver
-    // int population_size = 20;
-    // int max_generations = 100;
-    // if (filter_indices.size() != parameter_names.size()) {
-    //     return "Error: Mismatch in filter_indices and parameter_names size.";
-    // }
-    //
-    // if (population_size < 5 || max_generations < 1) {
-    //     return "Error: population_size must be >= 5 and max_generations >= 1.";
-    // }
+    // print all parameters
+    std::cout << "[OPTIMIZE] Filter indices: ";
+    for (auto idx: filter_indices) std::cout << idx << " ";
+    std::cout << "\n[OPTIMIZE] Parameter names: ";
+    for (const auto &p: parameter_names) std::cout << p << " ";
+    std::cout << "\n[OPTIMIZE] Solver ID: " << solver_id_str << "\n";
+    std::cout << "[OPTIMIZE] Population size: " << population_size << "\n";
+    std::cout << "[OPTIMIZE] Max generations: " << max_generations << "\n";
+
 
     bool ok;
     GUID solver_id = WString_To_GUID(Widen_String(solver_id_str), ok);
     if (!ok) return "Error: Invalid solver GUID.";
 
     std::vector<size_t> filter_indices_sized(filter_indices.begin(), filter_indices.end());
-
-    // wide_parameter_names.reserve(parameter_names.size());
-    // parameter_name_ptrs.reserve(parameter_names.size());
-    //
-    // for (const auto &name: parameter_names) {
-    //     wide_parameter_names.emplace_back(Widen_String(name));
-    // }
-    // for (const auto &wide: wide_parameter_names) {
-    //     parameter_name_ptrs.push_back(wide.c_str());
-    // }
-
 
     std::vector<const wchar_t *> parameter_name_ptrs;
     std::vector<std::wstring> wide_parameter_names;
@@ -1040,47 +1044,49 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     std::cout << "\n- Solver ID: " << solver_id_str << "\n";
     std::cout << "- Population Size: " << population_size << "\n";
     std::cout << "- Max Generations: " << max_generations << "\n";
-
-
-    HRESULT res = scgms::Optimize_Parameters(
-        (*chain_configuration),
-        filter_indices_sized.data(),
-        parameter_name_ptrs.data(),
-        filter_indices_sized.size(),
-        nullptr, nullptr, // Setup callback, On_Filter_Created
-        solver_id,
-        population_size,
-        max_generations,
-        nullptr, 0, // Hints
-        Global_Progress,
-        error_description
-    );
-
-    if (!Succeeded(res)) {
-        std::string err_msg = "Optimization failed:\n";
-        error_description.for_each([&err_msg](const std::wstring &msg) {
-            err_msg += Narrow_WString(msg) + "\n";
+    auto solver_id_copy = solver_id;
+    std::string result = "0";
+    HRESULT rc;
+    std::thread solver_thread([&]() {
+            rc = scgms::Optimize_Parameters(
+                (*chain_configuration),
+                filter_indices_sized.data(),
+                (parameter_name_ptrs.data()),
+                filter_indices_sized.size(),
+                nullptr, nullptr,
+                solver_id_copy,
+                population_size,
+                max_generations,
+                nullptr, 0,
+                Global_Progress,
+                error_description
+            );
+            optimizing_flag = false;
         });
-        return err_msg;
+    while (optimizing_flag) {
+        convert_to_global_progress_info(Global_Progress);  // např. vytisknout progress.current_progress
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+    if (solver_thread.joinable()) solver_thread.join();
+    if (rc == S_OK) {
+        std::cout << "Optimalizace proběhla úspěšně.\n";
+    } else {
+        std::cerr << "Chyba při optimalizaci.\n";
+        result = "1";
+        error_description.for_each([](const std::wstring& err) {
+            std::wcerr << err << std::endl;
+        });
     }
 
-    return "0"; // success
+
+    return result;
 }
 
 void print_solver_progress_loop() {
     std::cout << "[PROGRESS] Initiating monitor solving update ...\n";
 
     while (!Global_Progress.cancelled) {
-        std::cout << "Generation: " << Global_Progress.current_progress << " / " << Global_Progress.max_progress <<
-                "\n";
-        std::cout << "Best metric: ";
-        if (Global_Progress.best_metric[0] != 0) {
-            std::cout << Global_Progress.best_metric[0] << "\n";
-        } else {
-            std::cout << "N/A\n";
-        }
 
-        std::cout << "Status: " << ("Ongoing") << "\n\n";
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
@@ -1097,13 +1103,10 @@ void print_solver_progress_loop() {
     std::cout << "[PROGRESS] Monitoring ended.\n";
 }
 
+
+
 SolverProgressInfo get_solver_progress_info() {
-    SolverProgressInfo info;
-    info.current_progress = std::to_string(Global_Progress.current_progress);
-    info.max_progress = std::to_string(Global_Progress.max_progress);
-    info.best_metric = Global_Progress.best_metric[0];
-    info.status = Global_Progress.cancelled ? "Cancelled" : "Ongoing";
-    return info;
+    return progress_info;
 }
 
 std::string stop_optimization() {
@@ -1254,7 +1257,7 @@ int main() {
     insp_draw = {};
     insp_log = {};
 
-    std::thread solver_thread([]() {
+    // std::thread solver_thread([]() {
         std::string result = optimize_parameters(
             {8}, // filter indices
             {"Parameters"}, // parameter names
@@ -1262,16 +1265,12 @@ int main() {
             20, // population size
             100 // max generations
         );
-        if (result != "0") {
-            std::cerr << "[SOLVER] Chyba: " << result << std::endl;
-        } else {
-            std::cout << "[SOLVER] Optimalizace dokončena úspěšně." << std::endl;
-            Global_Progress.cancelled = true;
-        }
-    });
-    print_solver_progress_loop();
+    // });
 
-    solver_thread.join();
+
+    // print_solver_progress_loop();
+    // solver_thread.join();
+
 
     return 0;
 }
