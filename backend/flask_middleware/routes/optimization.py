@@ -6,13 +6,6 @@ optimization_bp = Blueprint("optimization", __name__)
 
 @optimization_bp.route("/solve", methods=["POST"])
 def solve():
-    # std::vector < int > & filter_indices,
-    # std::vector < std::string > & parameter_names,
-    # std::string & solver_id_str,
-    # int population_size,
-    # int max_generations)
-    # Here you would typically extract the parameters from the request
-    # and call the solve_service function with them.
 
     data = request.get_json()
     print("Received data: ", data)

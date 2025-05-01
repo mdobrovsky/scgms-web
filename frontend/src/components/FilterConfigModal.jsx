@@ -183,7 +183,7 @@ const FilterConfigModal = ({
                                                 }
 
                                                 {/* TO BE REMOVED WHEN RELEASED */}
-                                                <p className="small text-muted">{parameter.ui_parameter_tooltip ? parameter.ui_parameter_tooltip : ""}</p>
+                                                {/*<p className="small text-muted">{parameter.ui_parameter_tooltip ? parameter.ui_parameter_tooltip : ""}</p>*/}
                                             </Col>
                                             <Col lg={6} md={6}>
                                                 <ParameterInput

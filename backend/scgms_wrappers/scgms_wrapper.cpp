@@ -663,6 +663,7 @@ int update_output_filters_parameters() {
 
 
 HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *data) {
+
     if (!filter) {
         std::wcerr << L"[CALLBACK] Error: Filter creation failed!" << std::endl;
         return E_FAIL;
@@ -908,11 +909,14 @@ std::string load_scgms_lib() {
         std::wstring library_path = L"./scgms/libscgms.dylib";
         scgms::set_base_path(library_path);
 
+        // scgms::set_base_path(L"/build/scgms-release/build/compiled/libscgms.so");
+
         if (!scgms::is_scgms_loaded()) {
             std::cerr << "Library loading failed!" << std::endl;
             return "1";
         }
     }
+
     std::cout << "SCGMS library loaded successfully." << std::endl;
     return "0";
 }
@@ -1005,7 +1009,6 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
                                 const std::string &solver_id_str,
                                 int population_size,
                                 int max_generations) {
-    // print all parameters
     std::cout << "[OPTIMIZE] Filter indices: ";
     for (auto idx: filter_indices) std::cout << idx << " ";
     std::cout << "\n[OPTIMIZE] Parameter names: ";
@@ -1019,18 +1022,6 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     GUID solver_id = WString_To_GUID(Widen_String(solver_id_str), ok);
     if (!ok) return "Error: Invalid solver GUID.";
 
-    // std::vector<size_t> filter_indices_sized(filter_indices.begin(), filter_indices.end());
-    //
-    // std::vector<const wchar_t *> parameter_name_ptrs;
-    // std::vector<std::wstring> wide_parameter_names;
-    // parameter_name_ptrs.reserve(parameter_names.size());
-    // wide_parameter_names.reserve(parameter_names.size());
-    // for (const auto &name: parameter_names) {
-    //     wide_parameter_names.emplace_back(Widen_String(name));
-    // }
-    // for (const auto &wide: wide_parameter_names) {
-    //     parameter_name_ptrs.push_back(wide.c_str());
-    // }
     std::shared_ptr<std::vector<size_t> > filter_indices_sized_ptr = std::make_shared<std::vector<size_t> >(
         filter_indices.begin(), filter_indices.end());
 
@@ -1043,10 +1034,6 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     for (const auto &wide: wide_parameter_names) {
         parameter_name_ptrs_ptr->push_back(wide.c_str());
     }
-
-
-    // const wchar_t **parameter_name_ptrs_c = parameter_name_ptrs_ptr->data();
-
 
     Global_Progress = solver::TSolver_Progress{};
 
@@ -1116,7 +1103,6 @@ SolverProgressInfo get_solver_progress_info() {
     SolverProgressInfo info;
     info.current_progress = std::to_string(std::min(Global_Progress.current_progress, Global_Progress.max_progress));
     info.max_progress = std::to_string(Global_Progress.max_progress);
-    // convert best_metric to string
     info.best_metric = std::to_string(Global_Progress.best_metric[0]);
     info.status = Global_Progress.cancelled ? "Cancelled" : "Ongoing";
     return info;
@@ -1256,58 +1242,48 @@ int main() {
         std::cerr << "Failed to load scgms library.\n";
         return 1;
     }
+    auto a_filters = scgms::get_filter_descriptor_list();
+    std::wcout << L"Number of filters: " << a_filters.size() << std::endl;
+
+
     chain_configuration.emplace();
-    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", nullptr);
+    refcnt::Swstr_list errors;
+    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", errors.get());
     if (!Succeeded(res)) {
         std::cerr << "Failed to load configuration from file." << std::endl;
+        errors.for_each([](const std::wstring &str) mutable {
+            std::wcerr << str << std::endl;
+        });
         return 1;
     }
-
+    // print chain filters
+    // std::cout << "Loaded configuration from file." << std::endl;
+    // std::cout << "Available filters in the chain:" << std::endl;
+    // auto filters = get_chain_filters();
+    // for (const auto &filter: filters) {
+    //     print_filter_info(filter);
+    // }
+    //
     // execute();
+    //
+    // std::cout << "Executing filter chain..." << std::endl;
+    // std::this_thread::sleep_for(std::chrono::seconds(5));
+    // // print svgs and logs
+    // // log_svgs_to_console();
+    // // retrieve_logs();
+    // // stop the simulation
+    // stop_simulation();
 
-
-    // std::this_thread::sleep_for(std::chrono::seconds(3));
-    // //
-    insp_draw = {};
-    insp_log = {};
 
     // std::thread solver_thread([]() {
-    std::string result = optimize_parameters(
-        {8}, // filter indices
-        {"Parameters"}, // parameter names
-        "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}", // solver ID
-        20, // population size
-        100 // max generations
-    );
-    // });
-    // std::thread check_thread([]() {
-    //
-    // while (true) {
-    //     convert_to_global_progress_info(Global_Progress); // např. vytisknout progress.current_progress
-    //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    // }
-    // if (solver_thread.joinable()) solver_thread.join();
-    // if (solver_hr == S_OK) {
-    //     std::cout << "Optimalizace proběhla úspěšně.\n";
-    //     convert_to_global_progress_info(Global_Progress);
-    //     Global_Progress.cancelled = true;
-    // } else {
-    //     std::cerr << "Chyba při optimalizaci.\n";
-    //     solver_error_description.for_each([](const std::wstring &err) {
-    //         std::wcerr << err << std::endl;
-    //     });
-    // }
-    // });
-    // check_thread.detach();
+    // std::string result = optimize_parameters(
+    //     {8}, // filter indices
+    //     {"Parameters"}, // parameter names
+    //     "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}", // solver ID
+    //     20, // population size
+    //     100 // max generations
+    // );
 
-
-    // while (true) {
-    //     int a = 1;
-    // }
-
-
-    // print_solver_progress_loop();
-    // solver_thread.join();
 
 
     return 0;

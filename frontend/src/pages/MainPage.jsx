@@ -397,7 +397,8 @@ function MainPage() {
                         className="bi-hourglass"></i> Simulation</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
-                    <Nav.Link eventKey="optimize" disabled={disableModelBoundsNav}>Optimize parameters</Nav.Link>
+                    <Nav.Link eventKey="optimize" disabled={disableModelBoundsNav}>
+                        <i className="bi-sliders"/> Optimize parameters</Nav.Link>
                 </Nav.Item>
             </Nav>
             {(activeTab === "configuration") && (

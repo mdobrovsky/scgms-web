@@ -1,12 +1,5 @@
 import scgms_wrapper
 
-# struct SolverProgressInfo {
-#     std::string current_progress;
-#     std::string max_progress;
-#     std::string best_metric;
-#     std::string status;
-# };
-
 def solver_progress_info_to_dict(solver_progress):
     return {
         "current_progress": solver_progress.current_progress,
