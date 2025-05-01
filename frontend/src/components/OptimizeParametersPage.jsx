@@ -101,7 +101,26 @@ const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => 
 
             const populationSize = document.querySelector("#formPopulationSize").value;
             console.log("Population size:", populationSize);
+            const isValidMaxGen = maxGenerations >= 1;
+            const isValidPopSize = populationSize >= 5;
 
+            if (!isValidMaxGen) {
+                toast.error("Parameter 'Max generations' should be: ≥ 1");
+                return;
+            }
+            if (!isValidPopSize) {
+                toast.error("Parameter 'Population size' should be: ≥ 1");
+                return;
+            }
+
+            if (selectedFilterIndexes.length === 0) {
+                toast.error("Please select at least one filter to optimize");
+                return;
+            }
+            if (solver === "") {
+                toast.error("Please select a solver");
+                return;
+            }
             await toast.promise(
                 new Promise(async (resolve, reject) => {
                         try {

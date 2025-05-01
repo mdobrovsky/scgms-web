@@ -1,4 +1,5 @@
 /Applications/CLion.app/Contents/bin/cmake/mac/aarch64/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/aarch64/ninja -DCMAKE_CXX_FLAGS=-I/opt/homebrew/lib/python3.12/site-packages/pybind11/include -G Ninja -S /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers -B /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/cmake-build-debug
--- Configuring done (0.0s)
+-- Found pybind11: /opt/homebrew/include (found version "2.13.6")
+-- Configuring done (0.8s)
 -- Generating done (0.0s)
 -- Build files have been written to: /Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/scgms_wrappers/cmake-build-debug

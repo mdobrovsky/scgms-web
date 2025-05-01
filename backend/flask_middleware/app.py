@@ -24,5 +24,6 @@ app.register_blueprint(library_bp, url_prefix="/library")
 app.register_blueprint(optimization_bp, url_prefix="/optimization")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
+
 
