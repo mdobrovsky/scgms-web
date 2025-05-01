@@ -182,8 +182,7 @@ const FilterConfigModal = ({
                                                     : <p>{parameter.ui_parameter_name}</p>
                                                 }
 
-                                                {/* TO BE REMOVED WHEN RELEASED */}
-                                                {/*<p className="small text-muted">{parameter.ui_parameter_tooltip ? parameter.ui_parameter_tooltip : ""}</p>*/}
+                                                <p className="small text-muted">{parameter.ui_parameter_tooltip ? parameter.ui_parameter_tooltip : ""}</p>
                                             </Col>
                                             <Col lg={6} md={6}>
                                                 <ParameterInput
@@ -198,9 +197,9 @@ const FilterConfigModal = ({
                                                     filter={filter}
                                                     setCsvFiles={setCsvFiles}
                                                 />
-                                                <Form.Text id={parameter.ui_parameter_name} muted>
-                                                    {parameter.parameter_type}
-                                                </Form.Text>
+                                                {/*<Form.Text id={parameter.ui_parameter_name} muted>*/}
+                                                {/*    {parameter.parameter_type}*/}
+                                                {/*</Form.Text>*/}
                                             </Col>
                                             <hr/>
                                         </Row>
