@@ -78,6 +78,15 @@ function MainPage() {
             console.log("Fetched Metrics:", data);
             setMetrics(data);
         });
+        fetchChainFiltersAndUpdateList().then(r => {
+            console.log("Fetched Chain filters and updated list:", r);
+        });
+
+    }, []);
+
+
+    // fetch chain filters
+    const fetchChainFiltersAndUpdateList = async () => {
         fetchChainFilters().then(fetchedFilters => {
                 console.log("Fetched Chain filters:", fetchedFilters);
                 if (fetchedFilters.length > 0) {
@@ -90,8 +99,7 @@ function MainPage() {
                 }
             }
         );
-
-    }, []);
+    }
 
     // fetch logs in loop after start simulation
 
@@ -385,7 +393,8 @@ function MainPage() {
                     <Nav.Link eventKey="configuration"><i className="bi-gear"></i> Configuration</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
-                    <Nav.Link eventKey="simulation" disabled={disableModelBoundsNav}><i className="bi-hourglass"></i>  Simulation</Nav.Link>
+                    <Nav.Link eventKey="simulation" disabled={disableModelBoundsNav}><i
+                        className="bi-hourglass"></i> Simulation</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
                     <Nav.Link eventKey="optimize" disabled={disableModelBoundsNav}>Optimize parameters</Nav.Link>
@@ -434,7 +443,8 @@ function MainPage() {
             )}
 
             {activeTab === "optimize" && (
-                <OptimizeParametersPage solvers={solvers} filters={selectedFilters} models={models}/>
+                <OptimizeParametersPage solvers={solvers} filters={selectedFilters} models={models}
+                                        onSolveFinished={fetchChainFiltersAndUpdateList}/>
             )}
 
             {selectedFilter && (

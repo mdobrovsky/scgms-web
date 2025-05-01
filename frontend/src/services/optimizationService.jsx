@@ -20,7 +20,7 @@ export const solve = async (filterIndices, solverId, maxGenerations, populationS
 
 export const stopOptimization = async () => {
     try {
-        const response = await axios.post(STOP_OPTIMIZATION_URL);
+        const response = await axios.get(STOP_OPTIMIZATION_URL);
         return response.data.result;
     } catch (error) {
         console.error("Error stopping optimization:", error);

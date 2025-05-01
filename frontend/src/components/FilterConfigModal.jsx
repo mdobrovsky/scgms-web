@@ -212,7 +212,8 @@ const FilterConfigModal = ({
                                 filter.model : selectedModel}
                                                       values={filter.parameters.find((parameter) =>
                                                           parameter.parameter_type === "ptDouble_Array" &&
-                                                          parameter.config_parameter_name === "Model_Bounds"
+                                                          (parameter.config_parameter_name === "Model_Bounds" ||
+                                                              parameter.config_parameter_name === "Parameters")
                                                       )?.value || ""}
                                                       onBoundsChange={handleBoundsChange}/>
                         )}

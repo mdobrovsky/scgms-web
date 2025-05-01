@@ -1,14 +1,24 @@
-import {Alert, Modal, Button, Container, Row, Col, Form} from "react-bootstrap";
+import {Alert, Modal, Button, Container, Row, Col, Form, ProgressBar} from "react-bootstrap";
 import React from "react";
 import {findCorrespondingModelName} from "../services/utils.jsx";
 import PropTypes from "prop-types";
 import {toast} from "react-toastify";
 import {executeConfiguration, fetchLogs, fetchSvgs} from "../services/configService.jsx";
-import {fetchSolverProgress, solve} from "../services/optimizationService.jsx";
+import {fetchSolverProgress, solve, stopOptimization} from "../services/optimizationService.jsx";
 
 
 const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => {
         const [filtersToOptimize, setFiltersToOptimize] = React.useState([]);
+        const [solverIntervalId, setSolverIntervalId] = React.useState(null);
+        const [isSolveDisabled, setIsSolveDisabled] = React.useState(false);
+        const [isStopDisabled, setIsStopDisabled] = React.useState(true);
+        const [solverProgress, setSolverProgress] = React.useState({
+            current_progress: "0",
+            max_progress: "0",
+            best_metric: "0",
+            status: "Idle"
+        });
+
 
         React.useEffect(() => {
             const optimizedFilters = filters.filter((filter) =>
@@ -22,6 +32,54 @@ const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => 
 
 
         }, [filters]);
+
+        React.useEffect(() => {
+            return () => {
+                if (solverIntervalId) {
+                    clearInterval(solverIntervalId);
+                }
+            };
+        }, [solverIntervalId]);
+
+
+        const handleStop = async () => {
+            console.log("Stopping optimization...");
+            await toast.promise(
+                new Promise(async (resolve, reject) => {
+                    try {
+                        clearInterval(solverIntervalId);
+                        const result = await stopOptimization();
+                        if (result === "0") {
+                            setIsStopDisabled(true);
+                            setIsSolveDisabled(false);
+                            await onSolveFinished();
+                            resolve("Optimization stopped successfully");
+                        } else {
+                            reject(new Error("Error stopping optimization"));
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                }),
+                {
+                    pending: "Stopping optimization...",
+                    success:
+                        {
+                            render({data}) {
+                                return data; // render success message
+                            }
+                            ,
+                            icon: "✅"
+                        }
+                    ,
+                    error: {
+                        render({data}) {
+                            return `Error: ${data?.message || "Unknown error"}`;
+                        }
+                    }
+                }
+            )
+        }
 
         const handleSolve = async () => {
             const selectedOptions = document.querySelectorAll("#formMultiSelect option:checked");
@@ -50,26 +108,33 @@ const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => 
 
                             const result = await solve(selectedFilterIndexes, solver, maxGenerations,
                                 populationSize, parameterNames);
-                            if (result === "0"){
-                                // const solveIntervalId = setInterval(async () => {
-                                //     try {
-                                //         const progress = await fetchSolverProgress();
-                                //         // SVGS
-                                //         console.log("Solver progress:", progress);
-                                //         if (progress.status === "Cancelled" || progress.status === "Stopped") {
-                                //             clearInterval(solveIntervalId);
-                                //         }
-                                //     } catch (err) {
-                                //         console.error("Error solving:", err);
-                                //     }
-                                //
-                                // }, 1000);
-                                const progress = await fetchSolverProgress();
-                                console.log("Solver progress:", progress);
+                            if (result === "0") {
+                                setIsSolveDisabled(true);
+                                setIsStopDisabled(false);
+                                const intervalId = setInterval(async () => {
+                                    try {
+                                        const progress = await fetchSolverProgress();
+                                        console.log("Solver progress:", progress);
+                                        setSolverProgress(progress);
+                                        if (progress.status === "Cancelled" || progress.status === "Stopped") {
+                                            clearInterval(intervalId)
+                                            setIsSolveDisabled(false);
+                                            setIsStopDisabled(true);
+                                            if (progress.current_progress === progress.max_progress){
+                                                progress.status = "Finished";
+                                            }
+                                            setSolverProgress(progress);
+                                            await onSolveFinished();
+                                        }
+                                    } catch (err) {
+                                        console.error("Error solving:", err);
+                                    }
+
+                                }, 1000);
+                                setSolverIntervalId(intervalId);
+
                                 resolve("Optimization started successfully");
-                                await onSolveFinished();
-                            }
-                            else {
+                            } else {
                                 reject(new Error("Error starting optimization"));
                             }
                         } catch
@@ -191,17 +256,34 @@ const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => 
                 </Row>
                 <Row>
                     <Col>
-                        <p>Solver progress</p>
-                        <div className="overflow-auto" style={{height: "200px"}}>
-                            <p>Progress will be displayed here...</p>
-                        </div>
+                        <Row className="mb-3">
+                            <Col>
+                                <p>Solver progress</p>
+                                <ProgressBar
+                                    now={(solverProgress.max_progress > 0)
+                                        ? (100 * solverProgress.current_progress / solverProgress.max_progress)
+                                        : 0}
+                                    animated
+                                    striped
+                                    variant="info"
+                                    label={`${solverProgress.current_progress} / ${solverProgress.max_progress}`}
+                                />
+                                <div className="mt-2">
+                                    <strong>Status:</strong> {solverProgress.status} <br/>
+                                    <strong>Best metric:</strong> {solverProgress.best_metric}
+                                </div>
+                            </Col>
+                        </Row>
+
+
                     </Col>
                 </Row>
                 <Row>
                     <Col className="d-flex flex-row gap-3">
-                        <Button onClick={handleSolve} variant="outline-dark" className="mt-3"
+                        <Button onClick={handleSolve} disabled={isSolveDisabled} variant="outline-dark" className="mt-3"
                                 style={{width: '150px'}}>Solve</Button>
-                        <Button variant="outline-dark" className="mt-3" style={{width: '150px'}}>Stop</Button>
+                        <Button onClick={handleStop} disabled={isStopDisabled} variant="outline-dark" className="mt-3"
+                                style={{width: '150px'}}>Stop</Button>
                     </Col>
                 </Row>
 

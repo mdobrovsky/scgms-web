@@ -11,9 +11,14 @@ const convertDoubleToTimeParts = (value) => {
     return { days, hours, minutes, seconds };
 };
 
-export const updateFilterIndexes = (filters) => {
-    return filters.map((f, i) => ({ ...f, index: i.toString() }));
-};
+export function updateFilterIndexes(filters) {
+    return filters.map((filter, index) => ({
+        ...filter,            // nový objekt
+        index: index,         // aktualizovaný index
+        parameters: [...filter.parameters], // nový list pokud potřeba
+    }));
+}
+
 
 export const findCorrespondingModelName = (filter, models) => {
     const guid = filter.parameters.find((p => p.config_parameter_name === "Model")).value;
