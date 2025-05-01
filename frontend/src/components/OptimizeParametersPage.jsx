@@ -7,7 +7,7 @@ import {executeConfiguration, fetchLogs, fetchSvgs} from "../services/configServ
 import {fetchSolverProgress, solve} from "../services/optimizationService.jsx";
 
 
-const OptimizeParametersPage = ({solvers, filters, models}) => {
+const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => {
         const [filtersToOptimize, setFiltersToOptimize] = React.useState([]);
 
         React.useEffect(() => {
@@ -47,25 +47,27 @@ const OptimizeParametersPage = ({solvers, filters, models}) => {
             await toast.promise(
                 new Promise(async (resolve, reject) => {
                         try {
-                            const solveIntervalId = setInterval(async () => {
-                                try {
-                                    const progress = await fetchSolverProgress();
-                                    // SVGS
-                                    console.log("Solver progress:", progress);
-                                    if (progress.status === "Cancelled" || progress.status === "Stopped") {
-                                        clearInterval(solveIntervalId);
-                                    }
-                                } catch (err) {
-                                    console.error("Error solving:", err);
-                                }
 
-                            }, 1000);
-                            const result = solve(selectedFilterIndexes, solver, maxGenerations,
+                            const result = await solve(selectedFilterIndexes, solver, maxGenerations,
                                 populationSize, parameterNames);
                             if (result === "0"){
-
-
+                                // const solveIntervalId = setInterval(async () => {
+                                //     try {
+                                //         const progress = await fetchSolverProgress();
+                                //         // SVGS
+                                //         console.log("Solver progress:", progress);
+                                //         if (progress.status === "Cancelled" || progress.status === "Stopped") {
+                                //             clearInterval(solveIntervalId);
+                                //         }
+                                //     } catch (err) {
+                                //         console.error("Error solving:", err);
+                                //     }
+                                //
+                                // }, 1000);
+                                const progress = await fetchSolverProgress();
+                                console.log("Solver progress:", progress);
                                 resolve("Optimization started successfully");
+                                await onSolveFinished();
                             }
                             else {
                                 reject(new Error("Error starting optimization"));

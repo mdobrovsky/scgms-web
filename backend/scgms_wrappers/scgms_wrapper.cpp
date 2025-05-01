@@ -1070,6 +1070,8 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     if (solver_thread.joinable()) solver_thread.join();
     if (rc == S_OK) {
         std::cout << "Optimalizace proběhla úspěšně.\n";
+        convert_to_global_progress_info(Global_Progress);
+        Global_Progress.cancelled = true;
     } else {
         std::cerr << "Chyba při optimalizaci.\n";
         result = "1";
@@ -1251,6 +1253,9 @@ int main() {
     }
 
     // execute();
+    std::vector<FilterInfo> filters = get_chain_filters();
+    std::cout << "Filters in the chain:\n";
+    print_filter_info(filters[8]);
 
     // std::this_thread::sleep_for(std::chrono::seconds(3));
     // //
@@ -1267,6 +1272,9 @@ int main() {
         );
     // });
 
+    filters = get_chain_filters();
+    std::cout << "Filters in the chain:\n";
+    print_filter_info(filters[8]);
 
     // print_solver_progress_loop();
     // solver_thread.join();
