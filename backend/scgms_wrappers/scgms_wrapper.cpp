@@ -224,7 +224,7 @@ std::string add_filter(const std::string &guid_string) {
     bool ok;
     scgms::SFilter_Configuration_Link link = (*chain_configuration).Add_Link
             (WString_To_GUID(Widen_String(guid_string), ok));
-    return ok ? "0" : "1";
+    return ok && link ? "0" : "1";
 }
 
 std::string save_configuration(std::string &path) {
@@ -1243,26 +1243,32 @@ int main() {
         return 1;
     }
     auto a_filters = scgms::get_filter_descriptor_list();
-    std::wcout << L"Number of filters: " << a_filters.size() << std::endl;
+    // log guids
+    for (const auto &filter: a_filters) {
+        std::cout << "Filter ID: " << Narrow_WString(GUID_To_WString(filter.id)) << std::endl;
+        std::cout << "Filter Description: " << Narrow_WString(filter.description) << std::endl;
+    }
 
 
     chain_configuration.emplace();
     refcnt::Swstr_list errors;
-    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", errors.get());
-    if (!Succeeded(res)) {
-        std::cerr << "Failed to load configuration from file." << std::endl;
-        errors.for_each([](const std::wstring &str) mutable {
-            std::wcerr << str << std::endl;
-        });
-        return 1;
-    }
+    // HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", errors.get());
+    // if (!Succeeded(res)) {
+    //     std::cerr << "Failed to load configuration from file." << std::endl;
+    //     errors.for_each([](const std::wstring &str) mutable {
+    //         std::wcerr << str << std::endl;
+    //     });
+    //     return 1;
+    // }
+    std::string res = add_filter("{172EA814-9DF1-657C-1289-C71893F1D085}");
+    std::cout << "Add filter result: " << res << std::endl;
     // print chain filters
     // std::cout << "Loaded configuration from file." << std::endl;
     // std::cout << "Available filters in the chain:" << std::endl;
-    // auto filters = get_chain_filters();
-    // for (const auto &filter: filters) {
-    //     print_filter_info(filter);
-    // }
+    auto filters = get_chain_filters();
+    for (const auto &filter: filters) {
+        print_filter_info(filter);
+    }
     //
     // execute();
     //

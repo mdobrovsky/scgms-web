@@ -321,7 +321,7 @@ function MainPage() {
 
         if (result === "0") {
             const updated = updateFilterIndexes(
-                selectedFilters.filter(f => f.id !== filter.id)
+                selectedFilters.filter(f => f.index !== filter.index)
             );
             setSelectedFilters(updated);
 
