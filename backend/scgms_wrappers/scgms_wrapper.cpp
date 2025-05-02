@@ -33,8 +33,8 @@
 #include "../scgms-release/common/scgms/utils/string_utils.h"
 
 // constant strings for success and failure of the operation
-constexpr std::string SUCCESS = "0";
-constexpr std::string FAIL = "1";
+const std::string SUCCESS = "0";
+const std::string FAIL = "1";
 
 
 // structures for frontend representation of filters, models, solvers, metrics and signals
