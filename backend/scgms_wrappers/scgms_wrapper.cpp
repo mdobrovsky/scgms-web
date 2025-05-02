@@ -1025,7 +1025,7 @@ std::string execute() {
     svgs = {};
     refcnt::Swstr_list errors;
     if (Global_Filter_Executor) {
-        return "0";
+        return SUCCESS;
     }
 
     // Execute the filter chain
@@ -1070,7 +1070,7 @@ std::string execute() {
         std::cout << "[EXECUTE] Errors: " << error_message << std::endl;
         return error_message;
     }
-    return "0";
+    return SUCCESS;
 }
 
 
@@ -1089,12 +1089,12 @@ std::string load_scgms_lib() {
 
         if (!scgms::is_scgms_loaded()) {
             std::cerr << "Library loading failed!" << std::endl;
-            return "1";
+            return FAIL;
         }
     }
 
     std::cout << "SCGMS library loaded successfully." << std::endl;
-    return "0";
+    return SUCCESS;
 }
 
 /**
@@ -1142,12 +1142,12 @@ std::string stop_simulation() {
     HRESULT hr = Global_Filter_Executor->Terminate(TRUE);
     if (!Succeeded(hr)) {
         std::cerr << "Failed to terminate filter executor: " << Narrow_WChar(Describe_Error(hr)) << std::endl;
-        return "1";
+        return FAIL;
     }
 
     std::cout << "Filter executor terminated successfully." << std::endl;
     Global_Filter_Executor = {};
-    return "0";
+    return SUCCESS;
 }
 
 
@@ -1243,7 +1243,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     std::cout << "- Population Size: " << population_size << "\n";
     std::cout << "- Max Generations: " << max_generations << "\n";
     auto solver_id_copy = solver_id;
-    std::string result = "0";
+    std::string result = SUCCESS;
     std::thread solver_thread = std::thread(
         [
             // =
@@ -1454,7 +1454,7 @@ PYBIND11_MODULE(scgms_wrapper, m) {
  * @return 0 on success, 1 on failure
  */
 int main() {
-    if (load_scgms_lib() != "0") {
+    if (load_scgms_lib() != SUCCESS) {
         std::cerr << "Failed to load scgms library.\n";
         return 1;
     }
