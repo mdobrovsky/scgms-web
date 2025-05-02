@@ -13,10 +13,13 @@ const FilterConfigModal = ({
                            }) => {
     const formRef = useRef(null);
     const [loading, setLoading] = useState(false);
+    // Active tab in modal ("parameters" or "bounds")
     const [activeTab, setActiveTab] = useState("parameters");
     const [disableModelBoundsNav, setDisableModelBoundsNav] = useState(true);
     const [secondTabName, setSecondTabName] = useState("");
     const [csvFiles, setCsvFiles] = useState([]);
+
+    // Disable 'Model Bounds' tab if no model is selected
     useEffect(() => {
         if (selectedModel) {
             setDisableModelBoundsNav(false);
@@ -26,6 +29,7 @@ const FilterConfigModal = ({
         }
 
     }, [selectedModel]);
+    // Detect tab label based on parameter type
     useEffect(() => {
         filter.parameters.forEach((parameter) => {
             if (parameter.parameter_type === "ptDouble_Array") {
@@ -48,6 +52,7 @@ const FilterConfigModal = ({
 
     if (!filter) return null;
 
+    // Handle model bounds change
     const handleBoundsChange = (serializedBounds) => {
         const updatedParameters = filter.parameters.map((p) => {
             if (p.config_parameter_name === "Model_Bounds" && p.parameter_type === "ptDouble_Array") {
@@ -66,7 +71,8 @@ const FilterConfigModal = ({
 
     };
 
-
+    // Called when user clicks 'Save changes'
+    // Collects form values, updates local filter, and sends config to backend
     const handleSaveChanges = async () => {
         const formData = Object.fromEntries(new FormData(formRef.current).entries());
 

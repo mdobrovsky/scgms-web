@@ -15,3 +15,17 @@
 14359	14890	1746174892414505433	scgms_wrapper_debug	e16b67da6d2aa5f7
 12	10667	1746178513463047495	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
 10668	10971	1746178524118408290	scgms_wrapper_debug	e16b67da6d2aa5f7
+15	7488	1746178691238362536	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
+7488	7760	1746178698711445283	scgms_wrapper_debug	e16b67da6d2aa5f7
+43	13352	1746188217609726121	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
+13354	15542	1746188230920294596	scgms_wrapper_debug	e16b67da6d2aa5f7
+30	10454	1746188271680570826	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
+10455	10547	1746188282105588515	scgms_wrapper_debug	e16b67da6d2aa5f7
+11	9977	1746188313442943244	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
+9977	10242	1746188323408991498	scgms_wrapper_debug	e16b67da6d2aa5f7
+29	13165	1746189550016513228	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
+13166	13451	1746189563153165701	scgms_wrapper_debug	e16b67da6d2aa5f7
+23	7660	1746190030085536901	CMakeFiles/scgms_wrapper_debug.dir/scgms_wrapper.cpp.o	cabe3579cdc9be15
+23	7663	1746190030084907833	CMakeFiles/scgms_wrapper.dir/scgms_wrapper.cpp.o	e71772a948703e82
+7661	7946	1746190037722736755	scgms_wrapper_debug	e16b67da6d2aa5f7
+7663	7946	1746190037725557895	/Users/martindobrovsky/Desktop/bakalarska_prace/SCGMS_WEB/backend/flask_middleware/scgms_wrapper.cpython-312-darwin.so	d034e8d89d4e84ce

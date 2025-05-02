@@ -142,6 +142,9 @@ ULONG current_clock = 0;
 std::vector<SvgInfo> svgs;
 // Collected textual log lines during simulation
 std::vector<std::string> log_lines;
+static std::vector<std::wstring> wide_parameter_names;
+std::thread solver_thread;
+HRESULT solver_hr;
 
 /**
  * Convert a string to a NParameter_Type enum value.
@@ -289,7 +292,7 @@ std::string get_parameter_value(scgms::SFilter_Parameter parameter) {
 }
 
 /**
- * 
+ *
  * @param desc Metric descriptor
  * @return MetricInfo structure for frontend representation
  */
@@ -301,7 +304,7 @@ MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
 }
 
 /**
- * 
+ *
  * @param desc Solver descriptor
  * @return SolverInfo structure for frontend representation
  */
@@ -1222,7 +1225,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     std::shared_ptr<std::vector<size_t> > filter_indices_sized_ptr = std::make_shared<std::vector<size_t> >(
         filter_indices.begin(), filter_indices.end());
 
-    std::vector<std::wstring> wide_parameter_names;
+    wide_parameter_names.clear();
 
     auto parameter_name_ptrs_ptr = std::make_shared<std::vector<const wchar_t *> >();
     for (const auto &name: parameter_names) {
@@ -1244,7 +1247,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     std::cout << "- Max Generations: " << max_generations << "\n";
     auto solver_id_copy = solver_id;
     std::string result = SUCCESS;
-    std::thread solver_thread = std::thread(
+    solver_thread = std::thread(
         [
             // =
             filter_indices_sized_ptr, parameter_name_ptrs_ptr, solver_id_copy, population_size,
@@ -1252,7 +1255,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
         ](solver::TSolver_Progress &progress) {
             const size_t *filter_indices_data = filter_indices_sized_ptr->data();
             const wchar_t **parameter_names_data = parameter_name_ptrs_ptr->data();
-            HRESULT solver_hr = scgms::Optimize_Parameters(
+            solver_hr = scgms::Optimize_Parameters(
                 (*chain_configuration),
                 filter_indices_data,
                 parameter_names_data,
@@ -1266,13 +1269,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
                 solver_error_description
             );
             optimizing_flag = false;
-            if (!Succeeded(solver_hr)) {
-                std::cerr << "[OPTIMIZE] Error: " << Narrow_WChar(Describe_Error(solver_hr)) << std::endl;
-                return FAIL;
-            } else {
-                std::cout << "[OPTIMIZE] Optimization completed successfully." << std::endl;
-            }
-            return SUCCESS;
+
         }, std::ref(Global_Progress));
     solver_thread.detach();
 
@@ -1307,7 +1304,7 @@ void print_solver_progress_loop() {
  * @return SolverProgressInfo structure containing progress information
  */
 SolverProgressInfo get_solver_progress_info() {
-    if (Global_Progress.current_progress >= Global_Progress.max_progress) {
+    if (Global_Progress.current_progress != 0 && Global_Progress.current_progress >= Global_Progress.max_progress) {
         Global_Progress.cancelled = true;
     }
     SolverProgressInfo info;
@@ -1315,6 +1312,7 @@ SolverProgressInfo get_solver_progress_info() {
     info.max_progress = std::to_string(Global_Progress.max_progress);
     info.best_metric = std::to_string(Global_Progress.best_metric[0]);
     info.status = Global_Progress.cancelled ? "Cancelled" : "Ongoing";
+
     return info;
 }
 
@@ -1461,14 +1459,33 @@ int main() {
 
 
     chain_configuration.emplace();
-    refcnt::Swstr_list errors;
-    // print metrics
-    std::cout << "Available metrics:\n";
-    auto metrics = get_available_metrics();
-    for (const auto &metric: metrics) {
-        std::cout << "Metric ID: " << metric.id << "\n";
-        std::cout << "Metric Description: " << metric.description << "\n";
+    HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", nullptr);
+    if (!Succeeded(res)) {
+        std::cerr << "Failed to load configuration from file." << std::endl;
+        return 1;
     }
+    // test optimize
+    std::string result = optimize_parameters(
+         {8}, // filter indices
+         {"Parameters"}, // parameter names
+         "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}", // solver ID
+         20, // population size
+         100 // max generations
+     );
+
+    // loop to call and print progress
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        SolverProgressInfo progress = get_solver_progress_info();
+        std::cout << "Current progress: " << progress.current_progress << std::endl;
+        std::cout << "Max progress: " << progress.max_progress << std::endl;
+        std::cout << "Best metric: " << progress.best_metric << std::endl;
+        std::cout << "Status: " << progress.status << std::endl;
+        if (progress.status == "Cancelled") {
+            break;
+        }
+    }
+
 
 
     return 0;
