@@ -200,6 +200,8 @@ const FilterConfigModal = ({
                                                 {/*<Form.Text id={parameter.ui_parameter_name} muted>*/}
                                                 {/*    {parameter.parameter_type}*/}
                                                 {/*</Form.Text>*/}
+                                            {/*    a little space*/}
+                                                <div style={{height: "10px"}}></div>
                                             </Col>
                                             <hr/>
                                         </Row>

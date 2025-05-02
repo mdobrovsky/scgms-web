@@ -44,7 +44,7 @@ def remove_filter_service(index):
 def configure_filter_service(filter, parameters):
     print("Configuring filter: ", filter)
     for p in parameters:
-        res = scgms_wrapper.configure_filter(filter["index"] ,filter["id"], p["parameter_type"],
+        res = scgms_wrapper.configure_filter(str(filter["index"]) ,filter["id"], p["parameter_type"],
                                        p["config_parameter_name"],
                                        p["value"])
         if res != "0":

@@ -32,32 +32,12 @@
 #include "../scgms-release/common/scgms/rtl/UILib.h"
 #include "../scgms-release/common/scgms/utils/string_utils.h"
 
+// constant strings for success and failure of the operation
+constexpr std::string SUCCESS = "0";
+constexpr std::string FAIL = "1";
 
-std::atomic<bool> optimizing_flag{true};
-solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress;
 
-
-scgms::SFilter_Executor Global_Filter_Executor;
-//
-std::optional<scgms::SPersistent_Filter_Chain_Configuration> chain_configuration;
-
-static std::vector<std::wstring> wide_parameter_names;
-std::thread solver_thread;
-refcnt::Swstr_list solver_error_description;
-HRESULT solver_hr;
-
-scgms::SDrawing_Filter_Inspection_v2 insp_draw;
-scgms::SLog_Filter_Inspection insp_log;
-int drawing_v2_width;
-int drawing_v2_height;
-std::mutex drawing_mutex;
-std::thread monitor_thread;
-std::atomic<bool> stop_monitor_thread{false};
-std::vector<std::string> log_lines;
-ULONG current_clock = 0;
-
-//
-// structures for filter info
+// structures for frontend representation of filters, models, solvers, metrics and signals
 struct FilterParameter {
     std::string parameter_type;
     std::string ui_parameter_name;
@@ -131,36 +111,43 @@ struct SolverProgressInfo {
     std::string status;
 };
 
+
+// global variables
+// Flag indicating whether optimization is currently running
+std::atomic<bool> optimizing_flag{true};
+// Structure tracking solver progress
+solver::TSolver_Progress Global_Progress = solver::Null_Solver_Progress;
+// Executor object that runs the entire filter chain
+scgms::SFilter_Executor Global_Filter_Executor;
+// Filter chain configuration
+std::optional<scgms::SPersistent_Filter_Chain_Configuration> chain_configuration;
+// Container for potential error messages produced during optimization
+refcnt::Swstr_list solver_error_description;
+// Drawing interface for SVG output from the drawing filter
+scgms::SDrawing_Filter_Inspection_v2 insp_draw;
+// Log interfacce for textual log output from the log filter
+scgms::SLog_Filter_Inspection insp_log;
+// Dimensions of the SVG output from the drawing_v2 filter
+int drawing_v2_width;
+int drawing_v2_height;
+// Mutex to synchronize access to drawing outputs
+std::mutex drawing_mutex;
+// Thread for monitoring output updates
+std::thread monitor_thread;
+// Flag to signal the monitor thread to stop
+std::atomic<bool> stop_monitor_thread{false};
+// Current value of logical time used by drawing filter
+ULONG current_clock = 0;
+// Collected SVG outputs generated during simulation
 std::vector<SvgInfo> svgs;
-SolverProgressInfo progress_info;
+// Collected textual log lines during simulation
+std::vector<std::string> log_lines;
 
-
-MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
-    MetricInfo metric;
-    metric.id = Narrow_WString(GUID_To_WString(desc.id));
-    metric.description = Narrow_WString(desc.description);
-    return metric;
-}
-
-std::string reset_configuration() {
-    chain_configuration.emplace();
-
-    svgs.clear();
-    return "0";
-}
-
-SolverInfo convert_solver_descriptor(const scgms::TSolver_Descriptor &desc) {
-    SolverInfo solver;
-    solver.id = Narrow_WString(GUID_To_WString(desc.id));
-    solver.description = Narrow_WString(desc.description);
-    solver.specialized = desc.specialized;
-    solver.specialized_count = desc.specialized_count;
-    for (size_t i = 0; i < desc.specialized_count; ++i) {
-        solver.specialized_models.push_back(Narrow_WString(GUID_To_WString(desc.specialized_models[i])));
-    }
-    return solver;
-}
-
+/**
+ * Convert a string to a NParameter_Type enum value.
+ * @param type Parameter type as a string
+ * @return NParameter_Type enum value
+ */
 scgms::NParameter_Type StringToParameterType(const std::string &type) {
     if (type == "ptNull") return scgms::NParameter_Type::ptNull;
     if (type == "ptWChar_Array") return scgms::NParameter_Type::ptWChar_Array;
@@ -178,9 +165,14 @@ scgms::NParameter_Type StringToParameterType(const std::string &type) {
     if (type == "ptDouble_Array") return scgms::NParameter_Type::ptDouble_Array;
     if (type == "ptSubject_Id") return scgms::NParameter_Type::ptSubject_Id;
     if (type == "ptInvalid") return scgms::NParameter_Type::ptInvalid;
-    return scgms::NParameter_Type::ptInvalid; // Default case for unknown strings
+    return scgms::NParameter_Type::ptInvalid;
 }
 
+/**
+ * Convert a NParameter_Type enum value to a string.
+ * @param type Parameter type as an enum value
+ * @return String representation of the parameter type
+ */
 std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
     switch (type) {
         case scgms::NParameter_Type::ptNull:
@@ -220,57 +212,16 @@ std::wstring ParameterTypeToString(scgms::NParameter_Type type) {
     }
 }
 
-std::string add_filter(const std::string &guid_string) {
-    bool ok;
-    scgms::SFilter_Configuration_Link link = (*chain_configuration).Add_Link
-            (WString_To_GUID(Widen_String(guid_string), ok));
-    return ok && link ? "0" : "1";
-}
-
-std::string save_configuration(std::string &path) {
-    refcnt::Swstr_list errors;
-
-    HRESULT res = (*chain_configuration)->Save_To_File(Widen_String(path).c_str(), errors.get());
-    errors.for_each([](const std::wstring &str) {
-        std::wcerr << str << std::endl;
-    });
-
-    return Succeeded(res) ? "0" : "1";
-}
-
-std::string load_configuration(std::string &path) {
-    refcnt::Swstr_list errors;
-    chain_configuration.emplace();
-
-
-    HRESULT res = (*chain_configuration)->Load_From_File(Widen_String(path).c_str(), errors.get());
-    errors.for_each([](const std::wstring &str) {
-        std::wcerr << str << std::endl;
-    });
-
-    return Succeeded(res) ? "0" : "1";
-}
-
-
-std::string remove_filter(int index) {
-    HRESULT res = (*chain_configuration)->remove(index);
-    return Succeeded(res) ? "0" : "1";
-}
-
-
-std::string remove_all_filters() {
-    chain_configuration.emplace();
-
-
-    HRESULT res = (*chain_configuration)->empty();
-    return Succeeded(res) ? "0" : "1";
-}
-
+/**
+ * Get the default value for a parameter type.
+ * @param type Parameter type as an enum value
+ * @return Default value for the parameter type as a string
+ */
 std::string get_parameter_default_value(const scgms::NParameter_Type type) {
     switch (type) {
         case scgms::NParameter_Type::ptWChar_Array:
             return "";
-        case scgms::NParameter_Type::ptInt64_Array: // TODO
+        case scgms::NParameter_Type::ptInt64_Array:
             return "";
         case scgms::NParameter_Type::ptDouble:
             return "0.0";
@@ -287,9 +238,9 @@ std::string get_parameter_default_value(const scgms::NParameter_Type type) {
         case scgms::NParameter_Type::ptSignal_Id:
             return Narrow_WString(GUID_To_WString(Invalid_GUID));
         case scgms::NParameter_Type::ptDouble_Array:
-            return ""; // TODO
+            return "";
         case scgms::NParameter_Type::ptSubject_Id:
-            return ""; // TODO
+            return "";
         case scgms::NParameter_Type::ptInvalid:
             return "";
         default:
@@ -298,21 +249,23 @@ std::string get_parameter_default_value(const scgms::NParameter_Type type) {
     return "";
 }
 
+/**
+ * Get the value of a filter parameter.
+ * @param parameter Filter parameter
+ * @return Value of the parameter as a string
+ */
 std::string get_parameter_value(scgms::SFilter_Parameter parameter) {
-    // std::cout << "is nullptr: " << (parameter == nullptr) << std::endl;
     scgms::NParameter_Type type;
     HRESULT res = parameter->Get_Type(&type);
     HRESULT rc;
     switch (type) {
         case scgms::NParameter_Type::ptWChar_Array:
         case scgms::NParameter_Type::ptDouble_Array:
-            // std::wcout << "Getting wstring: " << parameter.as_wstring(rc, true) << std::endl;
             return Narrow_WString(parameter.as_wstring(rc, true));
-        case scgms::NParameter_Type::ptInt64_Array: // TODO
+        case scgms::NParameter_Type::ptInt64_Array:
             return "";
         case scgms::NParameter_Type::ptDouble:
         case scgms::NParameter_Type::ptRatTime:
-            // std::cout << "Getting double: " << parameter.as_double(rc) << std::endl;
             return dbl_2_str(parameter.as_double(rc));
         case scgms::NParameter_Type::ptInt64:
             return std::to_string(parameter.as_int(rc));
@@ -326,7 +279,7 @@ std::string get_parameter_value(scgms::SFilter_Parameter parameter) {
         case scgms::NParameter_Type::ptSignal_Id:
             return Narrow_WString(GUID_To_WString(parameter.as_guid(rc)));
         case scgms::NParameter_Type::ptSubject_Id:
-            return ""; // TODO
+            return "";
         case scgms::NParameter_Type::ptInvalid:
             return "";
         default:
@@ -335,140 +288,40 @@ std::string get_parameter_value(scgms::SFilter_Parameter parameter) {
     return "";
 }
 
-std::vector<std::string> split(const std::string &str, char delimiter) {
-    std::vector<std::string> tokens;
-    std::stringstream ss(str);
-    std::string token;
-
-    while (std::getline(ss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-
-    return tokens;
+/**
+ * 
+ * @param desc Metric descriptor
+ * @return MetricInfo structure for frontend representation
+ */
+MetricInfo convert_metric_descriptor(const scgms::TMetric_Descriptor &desc) {
+    MetricInfo metric;
+    metric.id = Narrow_WString(GUID_To_WString(desc.id));
+    metric.description = Narrow_WString(desc.description);
+    return metric;
 }
 
-std::vector<double> split_double_array(const std::string &value) {
-    std::vector<double> double_array;
-    std::vector<std::string> tokens = split(value, ' ');
-    for (const std::string &token: tokens) {
-        double_array.push_back(std::stod(token));
+/**
+ * 
+ * @param desc Solver descriptor
+ * @return SolverInfo structure for frontend representation
+ */
+SolverInfo convert_solver_descriptor(const scgms::TSolver_Descriptor &desc) {
+    SolverInfo solver;
+    solver.id = Narrow_WString(GUID_To_WString(desc.id));
+    solver.description = Narrow_WString(desc.description);
+    solver.specialized = desc.specialized;
+    solver.specialized_count = desc.specialized_count;
+    for (size_t i = 0; i < desc.specialized_count; ++i) {
+        solver.specialized_models.push_back(Narrow_WString(GUID_To_WString(desc.specialized_models[i])));
     }
-    return double_array;
+    return solver;
 }
 
-
-void get_link(const std::string &index, scgms::SFilter_Configuration_Link &link) {
-    size_t target_index = std::stoi(index);
-    size_t current_index = 0;
-    (*chain_configuration).for_each([&](scgms::SFilter_Configuration_Link chain_link) {
-        if (current_index == target_index) {
-            link = std::move(chain_link);
-        }
-        current_index++;
-    });
-}
-
-std::string configure_filter(
-    const std::string &index,
-    const std::string &id,
-    const std::string &parameter_type_string,
-    const std::string &config_parameter_name,
-    const std::string &value
-) {
-    bool ok;
-    scgms::SFilter_Configuration_Link link;
-    get_link(index, link);
-    if (!link) {
-        std::cerr << "Failed to add link for filter ID: " << id << std::endl;
-        return "1";
-    }
-    const scgms::NParameter_Type parameter_type = StringToParameterType(parameter_type_string);
-    if (parameter_type == scgms::NParameter_Type::ptNull) {
-        std::cerr << "Invalid parameter type: " << parameter_type_string << std::endl;
-        return "0";
-    }
-    std::wstring config_parameter_name_wstring = Widen_String(config_parameter_name);
-    const wchar_t *config_parameter_name_wchar = config_parameter_name_wstring.c_str();
-
-    scgms::SFilter_Parameter parameter = link.Resolve_Parameter(config_parameter_name_wchar);
-
-
-    if (!parameter) {
-        parameter = link.Add_Parameter(parameter_type, config_parameter_name_wchar);
-        if (!parameter) {
-            std::cerr << "Failed to add parameter: " << config_parameter_name << std::endl;
-            return "1";
-        }
-    }
-
-    HRESULT res = E_FAIL;
-    GUID guid;
-
-    switch (parameter_type) {
-        case scgms::NParameter_Type::ptRatTime:
-        case scgms::NParameter_Type::ptWChar_Array:
-            std::cout << "Setting wstring: " << value << std::endl;
-            res = parameter.set_wstring(Widen_String(value));
-            break;
-        case scgms::NParameter_Type::ptInt64_Array: // NERESIT
-            // TODO NEVIM
-            break;
-        case scgms::NParameter_Type::ptDouble:
-            res = parameter->Set_Double(std::stod(value));
-            break;
-        case scgms::NParameter_Type::ptInt64:
-            res = parameter->Set_Int64(std::stoll(value));
-            break;
-        case scgms::NParameter_Type::ptBool:
-            res = parameter->Set_Bool(value == "true");
-            break;
-        case scgms::NParameter_Type::ptSignal_Model_Id:
-        case scgms::NParameter_Type::ptDiscrete_Model_Id:
-        case scgms::NParameter_Type::ptMetric_Id:
-        case scgms::NParameter_Type::ptSolver_Id:
-        case scgms::NParameter_Type::ptModel_Produced_Signal_Id:
-        case scgms::NParameter_Type::ptSignal_Id:
-            ok = false;
-            guid = WString_To_GUID(Widen_String(value), ok);
-            if (!ok) {
-                std::cerr << "Failed to convert value to GUID: " << value << std::endl;
-                return "1";
-            }
-            res = parameter->Set_GUID(&guid);
-            break;
-        case scgms::NParameter_Type::ptDouble_Array:
-            res = parameter.set_double_array(split_double_array(value));
-            break;
-        case scgms::NParameter_Type::ptSubject_Id: // NERESIT
-            // TODO NEVIM
-            break;
-        case scgms::NParameter_Type::ptInvalid:
-            // TODO NEVIM
-            break;
-        default:
-            break;
-    }
-    if (!Succeeded(res)) {
-        std::wcerr << L"Failed to set parameter value for: " << config_parameter_name_wchar << std::endl;
-        return "1";
-    }
-
-    std::cout << "Successfully configured parameter: " << config_parameter_name << " with value: " << value <<
-            std::endl;
-    return "0";
-}
-
-std::string move_filter_up(int index) {
-    HRESULT res = (*chain_configuration)->move(index, index - 1);
-    return Succeeded(res) ? "0" : "1";
-}
-
-std::string move_filter_down(int index) {
-    HRESULT res = (*chain_configuration)->move(index, index + 1);
-    return Succeeded(res) ? "0" : "1";
-}
-
-
+/**
+ * Convert a signal descriptor to a SignalInfo structure.
+ * @param desc Signal descriptor
+ * @return SignalInfo structure for frontend representation
+ */
 SignalInfo convert_signal_descriptor(const scgms::TSignal_Descriptor &desc) {
     return SignalInfo{
         desc.fill_color,
@@ -484,15 +337,11 @@ SignalInfo convert_signal_descriptor(const scgms::TSignal_Descriptor &desc) {
     };
 }
 
-std::vector<SignalInfo> get_available_signals() {
-    const scgms::CSignal_Description signal_descriptors{};
-    std::vector<SignalInfo> signals;
-    signal_descriptors.for_each([&signals](const scgms::TSignal_Descriptor &desc) {
-        signals.push_back(convert_signal_descriptor(desc));
-    });
-    return signals;
-}
-
+/**
+ * Convert a model descriptor to a ModelInfo structure.
+ * @param desc Model descriptor
+ * @return ModelInfo structure for frontend representation
+ */
 ModelInfo convert_model_descriptor(const scgms::TModel_Descriptor &desc) {
     ModelInfo model;
     model.id = Narrow_WString(GUID_To_WString(desc.id));
@@ -545,37 +394,12 @@ ModelInfo convert_model_descriptor(const scgms::TModel_Descriptor &desc) {
     return model;
 }
 
-std::vector<ModelInfo> get_available_models() {
-    std::vector model_desc = scgms::get_model_descriptor_list();
-    std::vector<ModelInfo> models;
-    for (const scgms::TModel_Descriptor &desc: model_desc) {
-        ModelInfo model = convert_model_descriptor(desc);
-        models.push_back(model);
-    }
-    return models;
-}
-
-std::vector<SolverInfo> get_available_solvers() {
-    std::vector solver_desc = scgms::get_solver_descriptor_list();
-    std::vector<SolverInfo> solvers;
-    for (const scgms::TSolver_Descriptor &desc: solver_desc) {
-        SolverInfo solver = convert_solver_descriptor(desc);
-        solvers.push_back(solver);
-    }
-    return solvers;
-}
-
-std::vector<MetricInfo> get_available_metrics() {
-    std::vector metric_desc = scgms::get_metric_descriptor_list();
-    std::vector<MetricInfo> metrics;
-    for (const scgms::TMetric_Descriptor &desc: metric_desc) {
-        MetricInfo metric = convert_metric_descriptor(desc);
-        metrics.push_back(metric);
-    }
-    return metrics;
-}
-
-
+/**
+ * Convert a filter descriptor to a FilterInfo structure.
+ * @param filter Filter descriptor
+ * @param info FilterInfo structure to be filled
+ * @param link Optional link to the filter configuration
+ */
 void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, FilterInfo &info,
                                        scgms::SFilter_Configuration_Link *link = nullptr) {
     info.id = Narrow_WString(GUID_To_WString(filter.id));
@@ -594,7 +418,6 @@ void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, 
         param.ui_parameter_tooltip = Narrow_WString(filter.ui_parameter_tooltip[j]
                                                         ? filter.ui_parameter_tooltip[j]
                                                         : L"");
-        // std::wcout << p.configuration_name() << std::endl;
         if (link == nullptr) {
             param.default_value = get_parameter_default_value(type);
         } else {
@@ -605,6 +428,304 @@ void convert_filter_descriptor_to_info(const scgms::TFilter_Descriptor &filter, 
     }
 }
 
+/**
+ * Simple function to reset the filter chain configuration.
+ * @return always "0" as a string
+ */
+std::string reset_configuration() {
+    chain_configuration.emplace();
+    svgs.clear();
+    return SUCCESS;
+}
+
+
+/**
+ * Add a filter to the chain configuration.
+ * @param guid_string GUID of the filter as string
+ * @return "0" if the filter was added successfully, "1" otherwise
+ */
+std::string add_filter(const std::string &guid_string) {
+    bool ok;
+    scgms::SFilter_Configuration_Link link = (*chain_configuration).Add_Link
+            (WString_To_GUID(Widen_String(guid_string), ok));
+    return ok && link ? SUCCESS : FAIL;
+}
+
+/**
+ * Save the current configuration to a file.
+ * @param path Path where the configuration should be saved
+ * @return "0" if the configuration was saved successfully, "1" otherwise
+ */
+std::string save_configuration(std::string &path) {
+    refcnt::Swstr_list errors;
+
+    HRESULT res = (*chain_configuration)->Save_To_File(Widen_String(path).c_str(), errors.get());
+    errors.for_each([](const std::wstring &str) {
+        std::wcerr << str << std::endl;
+    });
+
+    return Succeeded(res) ? SUCCESS : FAIL;
+}
+
+/**
+ * Load a configuration from a file.
+ * @param path Path to the configuration file
+ * @return "0" if the configuration was loaded successfully, "1" otherwise
+ */
+std::string load_configuration(std::string &path) {
+    refcnt::Swstr_list errors;
+    chain_configuration.emplace();
+    HRESULT res = (*chain_configuration)->Load_From_File(Widen_String(path).c_str(), errors.get());
+    errors.for_each([](const std::wstring &str) {
+        std::wcerr << str << std::endl;
+    });
+    return Succeeded(res) ? SUCCESS : FAIL;
+}
+
+/**
+ * Remove a filter from the chain configuration.
+ * @param index Index of the filter to be removed
+ * @return "0" if the filter was removed successfully, "1" otherwise
+ */
+std::string remove_filter(int index) {
+    HRESULT res = (*chain_configuration)->remove(index);
+    return Succeeded(res) ? SUCCESS : FAIL;
+}
+
+/**
+ * Remove all filters from the chain configuration.
+ * Simply reinitializes the chain_configuration object.
+ * @return "0" if the filters were removed successfully, "1" otherwise
+ */
+std::string remove_all_filters() {
+    chain_configuration.emplace();
+    HRESULT res = (*chain_configuration)->empty();
+    return Succeeded(res) ? SUCCESS : FAIL;
+}
+
+
+/**
+ * Split a string into a vector of strings based on a delimiter.
+ * @param str String to be split
+ * @param delimiter Delimiter character
+ * @return Vector of strings obtained by splitting the input string
+ */
+std::vector<std::string> split(const std::string &str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+/**
+ * Split a string representation of a double array into a vector of doubles.
+ * @param value String representation of a double array
+ * @return Vector of doubles obtained by splitting the input string
+ */
+std::vector<double> split_double_array(const std::string &value) {
+    std::vector<double> double_array;
+    std::vector<std::string> tokens = split(value, ' ');
+    for (const std::string &token: tokens) {
+        double_array.push_back(std::stod(token));
+    }
+    return double_array;
+}
+
+/**
+ * Get the link at a specific index in the filter chain configuration.
+ * @param index Index of the link
+ * @param link Reference to the SFilter_Configuration_Link object to be filled
+ */
+void get_link(const std::string &index, scgms::SFilter_Configuration_Link &link) {
+    size_t target_index = std::stoi(index);
+    size_t current_index = 0;
+    (*chain_configuration).for_each([&](scgms::SFilter_Configuration_Link chain_link) {
+        if (current_index == target_index) {
+            link = std::move(chain_link);
+        }
+        current_index++;
+    });
+}
+
+/**
+ * Configure a filter parameter in the filter chain configuration.
+ * @param index Index of the filter in the chain
+ * @param id GUID of the filter
+ * @param parameter_type_string String representation of the parameter type
+ * @param config_parameter_name Name of the configuration parameter
+ * @param value Value to be set for the parameter
+ * @return "0" if the configuration was successful, "1" otherwise
+ */
+std::string configure_filter(
+    const std::string &index,
+    const std::string &id,
+    const std::string &parameter_type_string,
+    const std::string &config_parameter_name,
+    const std::string &value
+) {
+    bool ok;
+    scgms::SFilter_Configuration_Link link;
+    get_link(index, link);
+    if (!link) {
+        std::cerr << "Failed to add link for filter ID: " << id << std::endl;
+        return FAIL;
+    }
+    const scgms::NParameter_Type parameter_type = StringToParameterType(parameter_type_string);
+    if (parameter_type == scgms::NParameter_Type::ptNull) {
+        std::cerr << "Invalid parameter type: " << parameter_type_string << std::endl;
+        return FAIL;
+    }
+    std::wstring config_parameter_name_wstring = Widen_String(config_parameter_name);
+    const wchar_t *config_parameter_name_wchar = config_parameter_name_wstring.c_str();
+
+    scgms::SFilter_Parameter parameter = link.Resolve_Parameter(config_parameter_name_wchar);
+
+
+    if (!parameter) {
+        parameter = link.Add_Parameter(parameter_type, config_parameter_name_wchar);
+        if (!parameter) {
+            std::cerr << "Failed to add parameter: " << config_parameter_name << std::endl;
+            return FAIL;
+        }
+    }
+
+    HRESULT res = E_FAIL;
+    GUID guid;
+
+    switch (parameter_type) {
+        case scgms::NParameter_Type::ptRatTime:
+        case scgms::NParameter_Type::ptWChar_Array:
+            res = parameter.set_wstring(Widen_String(value));
+            break;
+        case scgms::NParameter_Type::ptInt64_Array:
+            break;
+        case scgms::NParameter_Type::ptDouble:
+            res = parameter->Set_Double(std::stod(value));
+            break;
+        case scgms::NParameter_Type::ptInt64:
+            res = parameter->Set_Int64(std::stoll(value));
+            break;
+        case scgms::NParameter_Type::ptBool:
+            res = parameter->Set_Bool(value == "true");
+            break;
+        case scgms::NParameter_Type::ptSignal_Model_Id:
+        case scgms::NParameter_Type::ptDiscrete_Model_Id:
+        case scgms::NParameter_Type::ptMetric_Id:
+        case scgms::NParameter_Type::ptSolver_Id:
+        case scgms::NParameter_Type::ptModel_Produced_Signal_Id:
+        case scgms::NParameter_Type::ptSignal_Id:
+            ok = false;
+            guid = WString_To_GUID(Widen_String(value), ok);
+            if (!ok) {
+                std::cerr << "Failed to convert value to GUID: " << value << std::endl;
+                return FAIL;
+            }
+            res = parameter->Set_GUID(&guid);
+            break;
+        case scgms::NParameter_Type::ptDouble_Array:
+            res = parameter.set_double_array(split_double_array(value));
+            break;
+        case scgms::NParameter_Type::ptSubject_Id:
+            break;
+        case scgms::NParameter_Type::ptInvalid:
+            break;
+        default:
+            break;
+    }
+    if (!Succeeded(res)) {
+        std::wcerr << L"Failed to set parameter value for: " << config_parameter_name_wchar << std::endl;
+        return FAIL;
+    }
+
+    std::cout << "Successfully configured parameter: " << config_parameter_name << " with value: " << value <<
+            std::endl;
+    return SUCCESS;
+}
+
+/**
+ * Move a filter up in the chain configuration.
+ * @param index Index of the filter to be moved
+ * @return "0" if the move was successful, "1" otherwise
+ */
+std::string move_filter_up(int index) {
+    HRESULT res = (*chain_configuration)->move(index, index - 1);
+    return Succeeded(res) ? SUCCESS : FAIL;
+}
+
+/**
+ * Move a filter down in the chain configuration.
+ * @param index Index of the filter to be moved
+ * @return "0" if the move was successful, "1" otherwise
+ */
+std::string move_filter_down(int index) {
+    HRESULT res = (*chain_configuration)->move(index, index + 1);
+    return Succeeded(res) ? SUCCESS : FAIL;
+}
+
+
+/**
+ * Get all available signals.
+ * @return Vector of SignalInfo structures representing available signals
+ */
+std::vector<SignalInfo> get_available_signals() {
+    const scgms::CSignal_Description signal_descriptors{};
+    std::vector<SignalInfo> signals;
+    signal_descriptors.for_each([&signals](const scgms::TSignal_Descriptor &desc) {
+        signals.push_back(convert_signal_descriptor(desc));
+    });
+    return signals;
+}
+
+
+/**
+ * Get all available models.
+ * @return Vector of ModelInfo structures representing available models
+ */
+std::vector<ModelInfo> get_available_models() {
+    std::vector model_desc = scgms::get_model_descriptor_list();
+    std::vector<ModelInfo> models;
+    for (const scgms::TModel_Descriptor &desc: model_desc) {
+        ModelInfo model = convert_model_descriptor(desc);
+        models.push_back(model);
+    }
+    return models;
+}
+
+/**
+ * Get all available solvers.
+ * @return Vector of SolverInfo structures representing available solvers
+ */
+std::vector<SolverInfo> get_available_solvers() {
+    std::vector solver_desc = scgms::get_solver_descriptor_list();
+    std::vector<SolverInfo> solvers;
+    for (const scgms::TSolver_Descriptor &desc: solver_desc) {
+        SolverInfo solver = convert_solver_descriptor(desc);
+        solvers.push_back(solver);
+    }
+    return solvers;
+}
+
+/**
+ * Get all available metrics.
+ * @return Vector of MetricInfo structures representing available metrics
+ */
+std::vector<MetricInfo> get_available_metrics() {
+    std::vector metric_desc = scgms::get_metric_descriptor_list();
+    std::vector<MetricInfo> metrics;
+    for (const scgms::TMetric_Descriptor &desc: metric_desc) {
+        MetricInfo metric = convert_metric_descriptor(desc);
+        metrics.push_back(metric);
+    }
+    return metrics;
+}
+
+/**
+ * Get all available filters.
+ * @return Vector of FilterInfo structures representing available filters
+ */
 std::vector<FilterInfo> get_available_filters() {
     const std::vector<scgms::TFilter_Descriptor> filter_list = scgms::get_filter_descriptor_list();
     std::vector<FilterInfo> filters;
@@ -617,7 +738,10 @@ std::vector<FilterInfo> get_available_filters() {
     return filters;
 }
 
-
+/**
+ * Get all filters in the current chain configuration.
+ * @return Vector of FilterInfo structures representing filters in the chain
+ */
 std::vector<FilterInfo> get_chain_filters() {
     if (!chain_configuration) {
         chain_configuration.emplace();
@@ -631,6 +755,10 @@ std::vector<FilterInfo> get_chain_filters() {
     return filters;
 }
 
+/**
+ * Get all filter descriptors in the current chain configuration.
+ * @return Vector of TFilter_Descriptor structures representing filters in the chain
+ */
 std::vector<scgms::TFilter_Descriptor> get_chain_filter_descriptors() {
     std::vector<scgms::TFilter_Descriptor> filter_descriptors;
     (*chain_configuration).for_each([&filter_descriptors](scgms::SFilter_Configuration_Link link) mutable {
@@ -639,7 +767,14 @@ std::vector<scgms::TFilter_Descriptor> get_chain_filter_descriptors() {
     return filter_descriptors;
 }
 
-
+/**
+ * Updates the global drawing width and height variables based on the parameters
+ * of the Drawing_Filter_v2 found in the current filter chain configuration.
+ *
+ * If no width/height parameter is set, defaults to 800x600 are used.
+ *
+ * @return always 0
+ */
 int update_output_filters_parameters() {
     (*chain_configuration).for_each([](scgms::SFilter_Configuration_Link link) mutable {
         // std::cout << "[CHAIN] Filter ID: " << Narrow_WChar(link.descriptor().description) << std::endl;
@@ -661,9 +796,15 @@ int update_output_filters_parameters() {
     return 0;
 }
 
-
+/**
+ * Callback invoked when a filter is created.
+ * Stores drawing or log filter inspectors if recognized.
+ *
+ * @param filter Pointer to the created filter.
+ * @param data Unused.
+ * @return S_OK on success, E_FAIL if filter is null.
+ */
 HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *data) {
-
     if (!filter) {
         std::wcerr << L"[CALLBACK] Error: Filter creation failed!" << std::endl;
         return E_FAIL;
@@ -685,7 +826,15 @@ HRESULT IfaceCalling on_filter_created_callback(scgms::IFilter *filter, void *da
     return S_OK;
 }
 
-
+/**
+ * Prepares drawing options (width, height, segments, signals) for SVG rendering
+ * using the given drawing filter inspector.
+ *
+ * @param opts     Output structure with drawing parameters.
+ * @param insp     Drawing filter inspector (v2).
+ * @param segments Output container of available segment IDs.
+ * @param signals  Output container of available signal IDs.
+ */
 void get_drawing_opts(
     scgms::TDraw_Options &opts,
     scgms::SDrawing_Filter_Inspection_v2 insp,
@@ -721,7 +870,9 @@ void get_drawing_opts(
     }
 }
 
-
+/**
+ * Retrieve SVG drawings from the drawing filter and store them in the svgs vector.
+ */
 void retrieve_drawings() {
     svgs.clear();
     auto caps = refcnt::Create_Container_shared<scgms::TPlot_Descriptor>(nullptr, nullptr);
@@ -732,7 +883,7 @@ void retrieve_drawings() {
 
         if (caps->get(&begin, &end) == S_OK) {
             int plot_index = 0;
-            std::wcout << L"Available plots: " << std::distance(begin, end) << std::endl;
+            // std::wcout << L"Available plots: " << std::distance(begin, end) << std::endl;
 
             for (auto it = begin; it != end; ++it) {
                 auto svg = refcnt::Create_Container_shared<char>(nullptr, nullptr);
@@ -764,6 +915,10 @@ void retrieve_drawings() {
     }
 }
 
+/**
+ * Get all SVG drawings stored in the svgs vector.
+ * @return Vector of SvgInfo structures representing SVG drawings
+ */
 std::vector<SvgInfo> get_svgs() {
     if (svgs.empty()) {
         std::cerr << "No SVGs available." << std::endl;
@@ -773,6 +928,10 @@ std::vector<SvgInfo> get_svgs() {
     return svgs;
 }
 
+/**
+ * Get all log lines stored in the log_lines vector.
+ * @return Vector of strings representing log lines
+ */
 std::vector<std::string> get_logs() {
     if (log_lines.empty()) {
         std::cerr << "No log lines available." << std::endl;
@@ -781,6 +940,9 @@ std::vector<std::string> get_logs() {
     return log_lines;
 }
 
+/**
+ * Log SVGs to the console.
+ */
 void log_svgs_to_console() {
     std::cout << "SVGs:" << std::endl;
     auto svgs = get_svgs();
@@ -791,6 +953,9 @@ void log_svgs_to_console() {
     }
 }
 
+/**
+ * Retrieve log lines from the log filter and store them in the log_lines vector.
+ */
 void retrieve_logs() {
     std::shared_ptr<refcnt::wstr_list> lines;
     while (insp_log.pop(lines)) {
@@ -799,13 +964,17 @@ void retrieve_logs() {
             if (lines->get(&begin, &end) == S_OK) {
                 for (auto iter = begin; iter != end; iter++) {
                     log_lines.push_back(Narrow_WString(WChar_Container_To_WString(*iter)));
-                    // std::cout << Narrow_WString(WChar_Container_To_WString(*iter)) << std::endl;
                 }
             }
         }
     }
 }
 
+/**
+ * Periodically monitors output from the running filter chain.
+ * Retrieves updated drawings and logs when logical clock changes.
+ * Exits when stop flag is set or executor becomes invalid.
+ */
 void monitor_output_updates() {
     uint64_t previous_clock = 0;
 
@@ -843,6 +1012,13 @@ void monitor_output_updates() {
     }
 }
 
+/**
+ * Execute the filter chain.
+ * Updates output filters parameters, retrieves drawings and logs if needed.
+ * Starts a monitor thread to periodically check for updates.
+ *
+ * @return "0" if execution was successful, error message otherwise
+ */
 std::string execute() {
     update_output_filters_parameters();
     log_lines = {};
@@ -899,8 +1075,8 @@ std::string execute() {
 
 
 /**
- * API
- * @return  0 if the library is loaded successfully, 1 otherwise
+ * Load the SCGMS library if not already loaded.
+ * @return  "0" if the library is loaded successfully, "1" otherwise
  */
 std::string load_scgms_lib() {
     if (!scgms::is_scgms_loaded()) {
@@ -921,10 +1097,20 @@ std::string load_scgms_lib() {
     return "0";
 }
 
+/**
+ * Initialize the configuration object.
+ */
 void init_config() {
     chain_configuration.emplace();
 }
 
+/**
+ * Inject an event into the filter executor.
+ * @param code Event code
+ * @param signal_id Signal ID
+ * @param info Event information
+ * @param segment_id Segment ID
+ */
 void inject_event(const scgms::NDevice_Event_Code &code, const GUID &signal_id, const wchar_t *info,
                   const uint64_t segment_id) {
     if (Global_Filter_Executor) {
@@ -936,6 +1122,10 @@ void inject_event(const scgms::NDevice_Event_Code &code, const GUID &signal_id, 
     }
 }
 
+/**
+ * Stop the simulation and terminate the filter executor.
+ * @return "0" if the simulation was stopped successfully, "1" otherwise
+ */
 std::string stop_simulation() {
     stop_monitor_thread.store(true);
     std::cout << "Stopping monitor thread..." << std::endl;
@@ -960,14 +1150,6 @@ std::string stop_simulation() {
     return "0";
 }
 
-/**
- * dummy API
- * @param number
- * @return number + 1
- */
-int add_one(int number) {
-    return number + 1;
-}
 
 void print_filter_info(const FilterInfo &filter) {
     std::cout << "Filter ID: " << filter.id << std::endl;
@@ -983,27 +1165,42 @@ void print_filter_info(const FilterInfo &filter) {
     }
 }
 
+/**
+ * Print information about all filters in the provided vector.
+ * @param filters Vector of FilterInfo structures to be printed
+ */
 void print_filters_info(std::vector<FilterInfo> filters) {
     for (const auto &filter: filters) {
         print_filter_info(filter);
     }
 }
 
-void convert_to_global_progress_info(solver::TSolver_Progress &progress) {
-    SolverProgressInfo info;
-    info.current_progress = std::to_string(progress.current_progress);
-    info.max_progress = std::to_string(progress.max_progress);
-    // convert best_metric to string
-    info.best_metric = std::to_string(progress.best_metric[0]);
-    info.status = progress.cancelled ? "Cancelled" : "Ongoing";
-    progress_info = info;
-    std::cout << "[PROGRESS] Current progress: " << info.current_progress << std::endl;
-    std::cout << "[PROGRESS] Max progress: " << info.max_progress << std::endl;
-    std::cout << "[PROGRESS] Best metric: " << info.best_metric << std::endl;
-    std::cout << "[PROGRESS] Status: " << info.status << std::endl;
-}
+// void convert_to_global_progress_info(solver::TSolver_Progress &progress) {
+//     SolverProgressInfo info;
+//     info.current_progress = std::to_string(progress.current_progress);
+//     info.max_progress = std::to_string(progress.max_progress);
+//     // convert best_metric to string
+//     info.best_metric = std::to_string(progress.best_metric[0]);
+//     info.status = progress.cancelled ? "Cancelled" : "Ongoing";
+//     progress_info = info;
+//     std::cout << "[PROGRESS] Current progress: " << info.current_progress << std::endl;
+//     std::cout << "[PROGRESS] Max progress: " << info.max_progress << std::endl;
+//     std::cout << "[PROGRESS] Best metric: " << info.best_metric << std::endl;
+//     std::cout << "[PROGRESS] Status: " << info.status << std::endl;
+// }
 
-
+/**
+ * Launches parameter optimization using the specified solver and filter configuration.
+ * Converts parameter names to wide strings, starts the optimization in a background thread,
+ * and tracks progress in a global progress object.
+ *
+ * @param filter_indices Indices of filters to optimize.
+ * @param parameter_names Names of the parameters to optimize.
+ * @param solver_id_str Solver GUID as a string.
+ * @param population_size Population size.
+ * @param max_generations Maximum number of generations.
+ * @return "0" on success, or an error message on failure.
+ */
 std::string optimize_parameters(const std::vector<int> &filter_indices,
                                 const std::vector<std::string> &parameter_names,
                                 const std::string &solver_id_str,
@@ -1025,7 +1222,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     std::shared_ptr<std::vector<size_t> > filter_indices_sized_ptr = std::make_shared<std::vector<size_t> >(
         filter_indices.begin(), filter_indices.end());
 
-    wide_parameter_names.clear();
+    std::vector<std::wstring> wide_parameter_names;
 
     auto parameter_name_ptrs_ptr = std::make_shared<std::vector<const wchar_t *> >();
     for (const auto &name: parameter_names) {
@@ -1047,7 +1244,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
     std::cout << "- Max Generations: " << max_generations << "\n";
     auto solver_id_copy = solver_id;
     std::string result = "0";
-    solver_thread = std::thread(
+    std::thread solver_thread = std::thread(
         [
             // =
             filter_indices_sized_ptr, parameter_name_ptrs_ptr, solver_id_copy, population_size,
@@ -1055,7 +1252,7 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
         ](solver::TSolver_Progress &progress) {
             const size_t *filter_indices_data = filter_indices_sized_ptr->data();
             const wchar_t **parameter_names_data = parameter_name_ptrs_ptr->data();
-            solver_hr = scgms::Optimize_Parameters(
+            HRESULT solver_hr = scgms::Optimize_Parameters(
                 (*chain_configuration),
                 filter_indices_data,
                 parameter_names_data,
@@ -1069,13 +1266,23 @@ std::string optimize_parameters(const std::vector<int> &filter_indices,
                 solver_error_description
             );
             optimizing_flag = false;
+            if (!Succeeded(solver_hr)) {
+                std::cerr << "[OPTIMIZE] Error: " << Narrow_WChar(Describe_Error(solver_hr)) << std::endl;
+                return FAIL;
+            } else {
+                std::cout << "[OPTIMIZE] Optimization completed successfully." << std::endl;
+            }
+            return SUCCESS;
         }, std::ref(Global_Progress));
     solver_thread.detach();
 
 
-    return "0";
+    return SUCCESS;
 }
 
+/**
+ * Print the progress of the solver.
+ */
 void print_solver_progress_loop() {
     std::cout << "[PROGRESS] Initiating monitor solving update ...\n";
 
@@ -1095,7 +1302,10 @@ void print_solver_progress_loop() {
     std::cout << "[PROGRESS] Monitoring ended.\n";
 }
 
-
+/**
+ * Get the current progress of the solver.
+ * @return SolverProgressInfo structure containing progress information
+ */
 SolverProgressInfo get_solver_progress_info() {
     if (Global_Progress.current_progress >= Global_Progress.max_progress) {
         Global_Progress.cancelled = true;
@@ -1108,14 +1318,18 @@ SolverProgressInfo get_solver_progress_info() {
     return info;
 }
 
+/**
+ * Stop the optimization process.
+ * @return always "0"
+ */
 std::string stop_optimization() {
     if (Global_Progress.cancelled) {
         std::cout << "[STOP] Optimization already cancelled." << std::endl;
-        return "0";
+        return SUCCESS;
     }
     Global_Progress.cancelled = true;
     std::cout << "[STOP] Optimization cancelled." << std::endl;
-    return "0";
+    return SUCCESS;
 }
 
 
@@ -1123,7 +1337,6 @@ PYBIND11_MAKE_OPAQUE(std::vector<FilterInfo>);
 
 PYBIND11_MODULE(scgms_wrapper, m) {
     m.doc() = "SCGMS Python module"; // optional module docstring
-    m.def("add_one", &add_one, "A function that adds 1 to a number (dummy func)");
     m.def("load_scgms_lib", &load_scgms_lib, "Loads the SCGMS library");
     m.def("init_config", &init_config, "Initializes the configuration");
     m.def("add_filter", &add_filter, "Adds a filter to the configuration");
@@ -1236,60 +1449,26 @@ PYBIND11_MODULE(scgms_wrapper, m) {
 
 #ifdef COMPILE_AS_EXECUTABLE
 
-
+/**
+ * Main function used only for testing the wrapper.
+ * @return 0 on success, 1 on failure
+ */
 int main() {
     if (load_scgms_lib() != "0") {
         std::cerr << "Failed to load scgms library.\n";
         return 1;
     }
-    auto a_filters = scgms::get_filter_descriptor_list();
-    // log guids
-    for (const auto &filter: a_filters) {
-        std::cout << "Filter ID: " << Narrow_WString(GUID_To_WString(filter.id)) << std::endl;
-        std::cout << "Filter Description: " << Narrow_WString(filter.description) << std::endl;
-    }
 
 
     chain_configuration.emplace();
     refcnt::Swstr_list errors;
-    // HRESULT res = (*chain_configuration)->Load_From_File(L"../cfg2/config.ini", errors.get());
-    // if (!Succeeded(res)) {
-    //     std::cerr << "Failed to load configuration from file." << std::endl;
-    //     errors.for_each([](const std::wstring &str) mutable {
-    //         std::wcerr << str << std::endl;
-    //     });
-    //     return 1;
-    // }
-    std::string res = add_filter("{172EA814-9DF1-657C-1289-C71893F1D085}");
-    std::cout << "Add filter result: " << res << std::endl;
-    // print chain filters
-    // std::cout << "Loaded configuration from file." << std::endl;
-    // std::cout << "Available filters in the chain:" << std::endl;
-    auto filters = get_chain_filters();
-    for (const auto &filter: filters) {
-        print_filter_info(filter);
+    // print metrics
+    std::cout << "Available metrics:\n";
+    auto metrics = get_available_metrics();
+    for (const auto &metric: metrics) {
+        std::cout << "Metric ID: " << metric.id << "\n";
+        std::cout << "Metric Description: " << metric.description << "\n";
     }
-    //
-    // execute();
-    //
-    // std::cout << "Executing filter chain..." << std::endl;
-    // std::this_thread::sleep_for(std::chrono::seconds(5));
-    // // print svgs and logs
-    // // log_svgs_to_console();
-    // // retrieve_logs();
-    // // stop the simulation
-    // stop_simulation();
-
-
-    // std::thread solver_thread([]() {
-    // std::string result = optimize_parameters(
-    //     {8}, // filter indices
-    //     {"Parameters"}, // parameter names
-    //     "{1B21B62F-7C6C-4027-89BC-687D8BD32B3C}", // solver ID
-    //     20, // population size
-    //     100 // max generations
-    // );
-
 
 
     return 0;
