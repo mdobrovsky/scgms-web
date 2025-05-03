@@ -578,8 +578,8 @@ std::string configure_filter(
     }
     const scgms::NParameter_Type parameter_type = StringToParameterType(parameter_type_string);
     if (parameter_type == scgms::NParameter_Type::ptNull) {
-        std::cerr << "Invalid parameter type: " << parameter_type_string << std::endl;
-        return FAIL;
+        std::cerr << "Invalid parameter type: " << parameter_type_string << ", skipping..." << std::endl;
+        return SUCCESS;
     }
     std::wstring config_parameter_name_wstring = Widen_String(config_parameter_name);
     const wchar_t *config_parameter_name_wchar = config_parameter_name_wstring.c_str();
