@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backup  # nebo uprav na konkretni backend Dockerfile
+    ports:
+      - "5000:5000"
+    working_dir: /build/flask_middleware
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=development
+ #   depends_on:
+ #     - scgms-core
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+#  scgms-core:
+#    image: scgms-prebuilt-release
+#    build:
+#      context: ./backend
+#      dockerfile: Dockerfile.scgms-release
