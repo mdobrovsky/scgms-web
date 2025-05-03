@@ -1,11 +1,26 @@
 import React from "react";
 import {Modal, Button, Container, Form} from "react-bootstrap";
+import {toast} from "react-toastify";
+
 import PropTypes from "prop-types";
 
 const LoadConfigModal = ({show, onClose, setConfigFile, setCsvFiles, onLoad}) => {
+    const [isLoadDisabled, setIsLoadDisabled] = React.useState(true);
+
+    // useffect
+    React.useEffect(() => {
+        setIsLoadDisabled(true);
+    } , [show]);
 
     const handleFileChange = (files) => {
         const configFile = Array.from(files).find(file => file.name.endsWith('.ini'));
+        if (!configFile) {
+            setIsLoadDisabled(true);
+            // Toast
+            toast.error("Please select a configuration file with .ini extension");
+            return;
+        }
+        setIsLoadDisabled(false);
         const csvFiles = Array.from(files).filter(file => file.name.endsWith('.csv'));
         if (configFile) {
             setConfigFile(configFile);
@@ -34,7 +49,7 @@ const LoadConfigModal = ({show, onClose, setConfigFile, setCsvFiles, onLoad}) =>
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onClose}>Close</Button>
-                <Button variant="primary" onClick={onLoad}>Load</Button>
+                <Button variant="primary" disabled={isLoadDisabled} onClick={onLoad}>Load</Button>
             </Modal.Footer>
         </Modal>
     );

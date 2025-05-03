@@ -3,7 +3,6 @@ import PropTypes from "prop-types";
 import {useRef, useState} from "react";
 
 export const SimulationTabs = ({svgs, logs, onDownload}) => {
-    // console.log("logs:", logs)
     return (
         <Container className="p-1">
             <Tabs defaultActiveKey={svgs.length > 0 ? "0" : "logs"} id="svg-tabs" className="mb-3">
@@ -14,9 +13,6 @@ export const SimulationTabs = ({svgs, logs, onDownload}) => {
                         key={index}
                     >
                         <div className="d-flex flex-column align-items-center mb-3">
-                            {/*<Button variant="outline-dark" className="mb-2">*/}
-                            {/*    Download*/}
-                            {/*</Button>*/}
                             <DraggableSvg svgHtml={svg.svg_str}
                                           onDownload={() => onDownload(svg.name + ".svg", svg.svg_str)}/>
                         </div>

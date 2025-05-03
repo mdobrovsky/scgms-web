@@ -33,6 +33,7 @@ const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => 
 
         }, [filters]);
 
+
         React.useEffect(() => {
             return () => {
                 if (solverIntervalId) {
