@@ -16,7 +16,6 @@ const LoadConfigModal = ({show, onClose, setConfigFile, setCsvFiles, onLoad}) =>
         const configFile = Array.from(files).find(file => file.name.endsWith('.ini'));
         if (!configFile) {
             setIsLoadDisabled(true);
-            // Toast
             toast.error("Please select a configuration file with .ini extension");
             return;
         }

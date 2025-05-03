@@ -27,19 +27,6 @@ export const SimulationPage = ({
                     <SimulationTabs svgs={svgs} logs={logs} onDownload={onDownload}/>
                 </Col>
 
-
-                {/*<Col md={2}>*/}
-                {/*    <div className="d-flex flex-column gap-2">*/}
-                {/*        <h5>Time segments</h5>*/}
-                {/*        <Button variant="outline-secondary">Example 1</Button>*/}
-                {/*        <Button variant="outline-secondary">Example 2</Button>*/}
-                {/*    </div>*/}
-                {/*    <div className="d-flex flex-column gap-2 mt-5">*/}
-                {/*        <h5>Signals</h5>*/}
-                {/*        <Button variant="outline-secondary">Example 1</Button>*/}
-                {/*        <Button variant="outline-secondary">Example 2</Button>*/}
-                {/*    </div>*/}
-                {/*</Col>*/}
             </Row>
         </Container>
     )
@@ -56,4 +43,5 @@ SimulationPage.propTypes = {
         })
     ).isRequired,
     logs: PropTypes.arrayOf(PropTypes.string).isRequired,
+    onDownload: PropTypes.func.isRequired,
 };

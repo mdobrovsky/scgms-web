@@ -51,7 +51,7 @@ export const SimulationTabs = ({svgs, logs, onDownload}) => {
     );
 };
 
-const DraggableSvg = ({svgHtml, onDownload}) => { // TODO probably add scaling
+const DraggableSvg = ({svgHtml, onDownload}) => {
     const wrapperRef = useRef(null);
     const innerRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);

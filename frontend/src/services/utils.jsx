@@ -13,9 +13,9 @@ const convertDoubleToTimeParts = (value) => {
 
 export function updateFilterIndexes(filters) {
     return filters.map((filter, index) => ({
-        ...filter,            // nový objekt
-        index: index,         // aktualizovaný index
-        parameters: [...filter.parameters], // nový list pokud potřeba
+        ...filter,
+        index: index,
+        parameters: [...filter.parameters],
     }));
 }
 

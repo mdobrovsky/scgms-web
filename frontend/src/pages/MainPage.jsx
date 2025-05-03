@@ -104,9 +104,9 @@ function MainPage() {
     // fetch logs in loop after start simulation
 
     const getOutputFilters = () => {
-        // filter only output filters like log, drawingv2, replay log
+        // filter only output filters like log, drawingv2
         // output filters: "Log", "Drawing filter v2", "CSV File Log Replay"
-        const outputFilters = ["Log", "Drawing filter v2", "CSV File Log Replay"];
+        const outputFilters = ["Log", "Drawing filter v2"];
         // do list where key is filter description if it is in the config
         const list = {};
         selectedFilters.forEach(filter => {
@@ -199,7 +199,7 @@ function MainPage() {
                                 try {
                                     const new_logs = await fetchLogs();
 
-                                    // LOGY
+                                    // LOGS
                                     let logsChanged = false;
                                     if (logs?.length !== new_logs.length) {
                                         logsChanged = true;
