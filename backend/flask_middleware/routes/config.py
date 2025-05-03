@@ -24,6 +24,7 @@ def save_configuration():
     # print("file_name:", file_name)
     config_path = f"{SAVED_CONFIGS_DIRECTORY}/{file_name}.ini"
     # print("config_path:", config_path)
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
 
     result = save_configuration_service(config_path)
 
@@ -43,6 +44,7 @@ def load_configuration():
     if not uploaded_file:
         return jsonify({"error": "No file uploaded"}), 400
     save_path = f"{LOADED_CONFIGS_DIRECTORY}/{file_name}"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     uploaded_file.save(save_path)
     # print(uploaded_file)
     csv_files = []
