@@ -1,3 +1,10 @@
+/**
+ * utils.js
+ *
+ * Contains utility functions used across the application.
+ */
+
+
 const convertDoubleToTimeParts = (value) => {
     const totalSeconds = Math.round(Number(value || 0) * 86400); // 1 den = 86400 sekund
 

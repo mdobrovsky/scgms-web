@@ -1,8 +1,14 @@
 import React from "react";
 import {Modal, Button, Container, Form} from "react-bootstrap";
 import {toast} from "react-toastify";
-
 import PropTypes from "prop-types";
+
+/**
+ * LoadConfigModal.jsx
+ *
+ * Modal dialog for uploading a configuration file (.ini) and optional CSV files.
+ * Validates file types and enables the load button accordingly.
+ */
 
 const LoadConfigModal = ({show, onClose, setConfigFile, setCsvFiles, onLoad}) => {
     const [isLoadDisabled, setIsLoadDisabled] = React.useState(true);

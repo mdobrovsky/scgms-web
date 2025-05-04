@@ -6,6 +6,11 @@ import MainPage from "./pages/MainPage.jsx";
 import "bootstrap/dist/css/bootstrap.min.css";
 import {ToastContainer} from "react-toastify";
 
+/**
+ * main.js
+ *
+ * Entry point of the React application. Sets up and renders the root component (MainPage)
+ */
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>

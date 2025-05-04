@@ -6,7 +6,13 @@ import {configureFilter} from "../services/filterService";
 import ModelBoundsEditableTable from "./ModelBoundsEditableTable.jsx";
 import {toast} from 'react-toastify';
 import {importCsvFiles} from "../services/configService.jsx";
-
+/**
+ * FilterConfigModal.jsx
+ *
+ * A modal dialog that allows users to configure a filter by editing its parameters.
+ * Supports tab-based interface for standard parameters and model bounds editing.
+ *
+ */
 const FilterConfigModal = ({
                                filter, setFilter, show, onClose, signals, models, metrics,
                                solvers, selectedModel, setSelectedModel, setSelectedFilters

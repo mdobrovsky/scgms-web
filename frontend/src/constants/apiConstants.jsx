@@ -1,7 +1,12 @@
-// apiConstants.js
+/**
+ * apiConstants.js
+ *
+ * Defines all backend API endpoint URLs used throughout the frontend application.
+ * The base URL is constructed dynamically based on the environment variable VITE_BACKEND_PORT,
+ * with a fallback to port 5000 if not specified.
+ */
 export const API_BASE_URL = `http://127.0.0.1:${import.meta.env.VITE_BACKEND_PORT || 5000}`;
 export const FETCH_FILTERS_URL = `${API_BASE_URL}/filters/fetch`;
-
 export const ADD_FILTER_URL = `${API_BASE_URL}/filters/add`;
 export const CONFIGURE_FILTER_URL = `${API_BASE_URL}/filters/configure`;
 export const INIT_CONFIGURATION_URL = `${API_BASE_URL}/config/init`;

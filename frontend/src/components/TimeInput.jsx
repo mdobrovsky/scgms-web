@@ -1,6 +1,11 @@
 import React from "react";
 import { Form } from "react-bootstrap";
 import PropTypes from "prop-types";
+/**
+ * TimeInput.jsx
+ *
+ * Reusable form component for time input with optional step configuration.
+ */
 
 const TimeInput = ({ id, name, value, onChange, step = 1 }) => {
     return (

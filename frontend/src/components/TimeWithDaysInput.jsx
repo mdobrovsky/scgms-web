@@ -2,6 +2,12 @@ import React, { useState, useEffect } from "react";
 import { Col, Container, Form, Row } from "react-bootstrap";
 import PropTypes from "prop-types";
 import convertDoubleToTimeParts from "../services/utils.jsx";
+/**
+ * TimeWithDaysInput.jsx
+ *
+ * Composite input component for entering time in days and hh:mm:ss format.
+ * Converts input to a single numeric value in days.
+ */
 
 const pad = (num) => String(num).padStart(2, "0");
 

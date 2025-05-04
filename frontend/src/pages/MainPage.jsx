@@ -20,6 +20,14 @@ import {toast} from "react-toastify";
 import {updateFilterIndexes} from "../services/utils.jsx";
 import {SimulationPage} from "../components/SimulationPage.jsx";
 import OptimizeParametersPage from "../components/OptimizeParametersPage.jsx";
+/**
+ * MainPage.jsx
+ *
+ * Root component of the frontend application.
+ * Manages global state, routing between configuration, simulation, and optimization tabs,
+ * and handles backend interactions such as executing simulations, saving/loading configurations,
+ * and fetching data (filters, signals, models, solvers, metrics).
+ */
 
 function MainPage() {
     const [availableFilters, setAvailableFilters] = useState([]);

@@ -1,5 +1,11 @@
 import axios from "axios";
 import { FETCH_SIGNALS_URL } from "../constants/apiConstants";
+/**
+ * signalService.js
+ *
+ * Provides a function to fetch available signals from the backend.
+ * Signals are sorted alphabetically by their description.
+ */
 
 export const fetchSignals = async () => {
     try {

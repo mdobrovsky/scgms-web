@@ -3,6 +3,12 @@ import {Button, ButtonGroup, Card, ListGroup} from "react-bootstrap";
 import PropTypes from "prop-types";
 import {moveFilterDown, moveFilterUp} from "../services/filterService.jsx";
 import {updateFilterIndexes} from "../services/utils.jsx";
+/**
+ * SelectedFilterList.jsx
+ *
+ * Displays the list of applied filters with support for reordering (up/down), configuration,
+ * and removal. Handles selection and state synchronization with the parent component.
+ */
 
 const SelectedFilterList = ({
                                 filters, onFilterSelect, setSelectedFilters, handleConfigureFilter, handleRemoveFilter,

@@ -3,6 +3,13 @@ import PropTypes from "prop-types";
 import React, {useEffect} from "react";
 import convertDoubleToTime from "../services/utils";
 import TimeWithDaysInput from "./TimeWithDaysInput.jsx";
+/**
+ * ParameterInput.jsx
+ *
+ * Dynamically renders appropriate form input based on the filter parameter type.
+ * updates filter state, and handles interactions such as model selection or CSV file input.
+ *
+ */
 
 const pad = (num) => String(num).padStart(2, "0");
 

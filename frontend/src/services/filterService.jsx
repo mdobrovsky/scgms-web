@@ -6,7 +6,13 @@ import {
     MOVE_FILTER_UP_URL,
     REMOVE_FILTER_URL
 } from "../constants/apiConstants";
-
+/**
+ * filterService.jsx
+ *
+ * Provides asynchronous functions for managing filters in the SmartCGMS web interface.
+ * Includes API calls for fetching, adding, removing, moving, and configuring filters via Axios.
+ *
+ */
 export const fetchFilters = async () => {
     try {
         const response = await axios.get(FETCH_FILTERS_URL);

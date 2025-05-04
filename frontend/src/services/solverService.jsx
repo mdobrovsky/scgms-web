@@ -1,5 +1,11 @@
 import axios from "axios";
 import { FETCH_SOLVERS_URL } from "../constants/apiConstants";
+/**
+ * solverService.js
+ *
+ * Provides a function to fetch available solvers from the backend.
+ * Solvers are sorted alphabetically by their description.
+ */
 
 export const fetchSolvers = async () => {
     try {

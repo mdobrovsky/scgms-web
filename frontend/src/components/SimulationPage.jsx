@@ -1,6 +1,12 @@
 import {Button, Col, Container, Image, Row} from "react-bootstrap";
 import {SimulationTabs} from "./SimulationTabs.jsx";
 import PropTypes from "prop-types";
+/**
+ * SimulationPage.jsx
+ *
+ * Main UI for controlling and visualizing a simulation.
+ * Provides start/stop controls and displays simulation output (SVG plots and logs).
+ */
 
 export const SimulationPage = ({
                                    handleStartButton,

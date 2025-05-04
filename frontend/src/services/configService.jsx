@@ -7,6 +7,13 @@ import {
     SAVE_CONFIGURATION_URL, STOP_SIMULATION_URL
 } from "../constants/apiConstants.jsx";
 
+/**
+ * configService.js
+ *
+ * Provides functions for interacting with the backend configuration API.
+ * Includes operations for initializing, executing, stopping simulations,
+ * saving/loading configurations, importing CSV files, and retrieving logs/SVGs.
+ */
 
 export const initConfiguration = async () => {
     try {

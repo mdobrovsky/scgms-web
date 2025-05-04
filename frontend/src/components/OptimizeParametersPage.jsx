@@ -6,6 +6,13 @@ import {toast} from "react-toastify";
 import {executeConfiguration, fetchLogs, fetchSvgs} from "../services/configService.jsx";
 import {fetchSolverProgress, solve, stopOptimization} from "../services/optimizationService.jsx";
 
+/**
+ * OptimizeParametersPage.jsx
+ *
+ * Component for configuring and executing parameter optimization using solvers.
+ * Allows users to select filters with configurable parameters, set solver options,
+ * and monitor optimization progress in real-time.
+ */
 
 const OptimizeParametersPage = ({solvers, filters, models, onSolveFinished}) => {
         const [filtersToOptimize, setFiltersToOptimize] = React.useState([]);

@@ -1,5 +1,11 @@
 import axios from "axios";
 import { FETCH_MODELS_URL } from "../constants/apiConstants";
+/**
+ * modelService.js
+ *
+ * Fetches available models from the backend API.
+ * Returns the models sorted alphabetically by their description.
+ */
 
 export const fetchModels = async () => {
     try {

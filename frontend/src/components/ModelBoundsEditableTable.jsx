@@ -9,6 +9,12 @@ const ResetType = {
     UPPER: "upper"
 };
 
+/**
+ * ModelBoundsEditableTable.jsx
+ *
+ * Component for editing lower, default, and upper bounds of model parameters in a tabular form.
+ * Supports both numeric and time-based inputs. On change, emits serialized bounds string.
+ */
 
 const ModelBoundsEditableTable = ({model, values, onBoundsChange}) => {
     const rowCount = model?.number_of_parameters || 0;

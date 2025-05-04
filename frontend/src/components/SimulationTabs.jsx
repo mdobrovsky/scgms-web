@@ -1,6 +1,12 @@
 import {Container, Tabs, Tab, Button} from "react-bootstrap";
 import PropTypes from "prop-types";
 import {useRef, useState} from "react";
+/**
+ * SimulationTabs.jsx
+ *
+ * Displays simulation output using tab navigation.
+ * Includes draggable SVG plots and simulation logs with download options.
+ */
 
 export const SimulationTabs = ({svgs, logs, onDownload}) => {
     return (

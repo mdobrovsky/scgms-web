@@ -1,6 +1,12 @@
 import {Card, ListGroup} from "react-bootstrap";
 import PropTypes from "prop-types";
-
+/**
+ * AvailableFilterList.jsx
+ *
+ * A React component that displays a scrollable list of available filters.
+ * Each filter is rendered as a clickable item; clicking triggers onFilterSelect.
+ *
+ */
 const AvailableFilterList = ({filters, onFilterSelect}) => {
     return (
         <Card className="p-3 mt-4 h-100 shadow-sm" style={{height: "550px"}}>

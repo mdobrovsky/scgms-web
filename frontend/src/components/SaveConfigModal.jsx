@@ -1,6 +1,12 @@
 import React from "react";
 import {Modal, Button, Container, Form, InputGroup} from "react-bootstrap";
 import PropTypes from "prop-types";
+/**
+ * SaveConfigModal.jsx
+ *
+ * Modal dialog for entering and validating a configuration file name before downloading.
+ * Validates input to prevent empty names and illegal characters, and appends `.ini` extension.
+ */
 
 const SaveConfigModal = ({show, onClose, onSave, fileName, setFileName, fileNameError, setFileNameError}) => {
     const validateFileName = (name) => {

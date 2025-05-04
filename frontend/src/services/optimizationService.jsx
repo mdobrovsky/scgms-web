@@ -1,5 +1,11 @@
 import axios from "axios";
 import { STOP_OPTIMIZATION_URL, FETCH_SOLVER_PROGRESS_URL, SOLVE_URL } from "../constants/apiConstants";
+/**
+ * optimizationService.js
+ *
+ * Provides functions for starting, stopping, and monitoring parameter optimization.
+ *
+ */
 
 export const solve = async (filterIndices, solverId, maxGenerations, populationSize, parameterNames) => {
     try {
