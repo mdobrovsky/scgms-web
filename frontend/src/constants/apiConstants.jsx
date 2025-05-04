@@ -1,5 +1,5 @@
 // apiConstants.js
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5000";
+export const API_BASE_URL = `http://127.0.0.1:${import.meta.env.VITE_BACKEND_PORT || 5000}`;
 export const FETCH_FILTERS_URL = `${API_BASE_URL}/filters/fetch`;
 
 export const ADD_FILTER_URL = `${API_BASE_URL}/filters/add`;

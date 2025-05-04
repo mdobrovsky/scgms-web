@@ -6,7 +6,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile 
     ports:
-      - "5000:5000"
+      - "${BACKEND_PORT:-5000}:5000"
     working_dir: /build/flask_middleware
     restart: unless-stopped
     environment:
@@ -18,10 +18,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_BACKEND_PORT: ${BACKEND_PORT}
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     restart: unless-stopped
-
+    environment:
+      - VITE_BACKEND_PORT=${BACKEND_PORT}
 #  scgms-core:
 #    image: scgms-prebuilt-release
 #    build:
