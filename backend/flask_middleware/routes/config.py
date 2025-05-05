@@ -64,8 +64,15 @@ def load_configuration():
             break
     for csv_file in csv_files:
         csv_file_name = csv_file.filename
-        csv_file_path = os.path.join(LOADED_CONFIGS_DIRECTORY, csv_file_name)
-        csv_file.save(csv_file_path)
+        # csv_file_path = os.path.join(LOADED_CONFIGS_DIRECTORY, csv_file_name)
+        # csv_file.save(csv_file_path)
+        data = csv_file.read()
+
+        with open(os.path.join("./", csv_file_name), "wb") as f:
+            f.write(data)
+
+        with open(os.path.join(LOADED_CONFIGS_DIRECTORY, csv_file_name), "wb") as f:
+            f.write(data)
 
     result = load_configuration_service(save_path)
     # result = "0"
