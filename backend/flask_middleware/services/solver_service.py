@@ -1,4 +1,6 @@
 import scgms_wrapper
+# solver_service.py
+# Provides access to available optimization solvers from the SmartCGMS system and converts their metadata to dictionaries.
 
 # Convert FilterParameter object to dictionary
 def solvers_info_to_dict(solver):

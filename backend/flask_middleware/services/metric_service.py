@@ -1,5 +1,9 @@
 import scgms_wrapper
 
+# metric_service.py
+# Provides functionality for retrieving available metrics from the SmartCGMS backend via scgms_wrapper.
+
+
 # Convert FilterParameter object to dictionary
 def metrics_info_to_dict(metric):
     return {

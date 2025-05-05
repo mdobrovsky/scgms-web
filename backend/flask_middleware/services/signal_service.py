@@ -1,4 +1,6 @@
 import scgms_wrapper
+# signal_service.py
+# Provides functionality to retrieve and convert available signal metadata from the SmartCGMS system.
 
 # Convert FilterParameter object to dictionary
 def signal_info_to_dict(signal):

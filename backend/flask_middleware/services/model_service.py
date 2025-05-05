@@ -1,4 +1,6 @@
 import scgms_wrapper
+# model_service.py
+# Provides functionality to retrieve and serialize available model definitions from SmartCGMS.
 
 # Convert FilterParameter object to dictionary
 def models_info_to_dict(model):

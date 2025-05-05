@@ -1,5 +1,8 @@
 import scgms_wrapper
 
+# filter_service.py
+# Defines utility functions for managing filters in the SmartCGMS chain,
+# including retrieval, addition, removal, configuration, and reordering.
 
 # Convert FilterParameter object to dictionary
 def filter_parameter_to_dict(param):

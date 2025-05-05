@@ -1,5 +1,10 @@
 import scgms_wrapper
 
+
+# optimization_service.py
+# Provides services for running parameter optimization using SmartCGMS solvers, including start,
+# progress tracking, and stop functionality.
+
 def solver_progress_info_to_dict(solver_progress):
     return {
         "current_progress": solver_progress.current_progress,
@@ -7,6 +12,7 @@ def solver_progress_info_to_dict(solver_progress):
         "best_metric": solver_progress.best_metric,
         "status": solver_progress.status,
     }
+
 
 def solve_service(filter_indices, parameter_names, solver_id_str, population_size, max_generations):
     return scgms_wrapper.optimize_parameters(filter_indices, parameter_names, solver_id_str, population_size,

@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify
 from services.signal_service import get_available_signals
 
+# signals_routes.py
+# Defines an API endpoint for retrieving available signals.
 signals_bp = Blueprint("signals", __name__)
 
 @signals_bp.route("/fetch", methods=["GET"])

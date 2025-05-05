@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 
 from services.optimization_service import solve_service, fetch_progress_service, stop_service
+# optimization_routes.py
+# Provides API endpoints for starting, monitoring, and stopping the optimization process within the SmartCGMS system.
 
 optimization_bp = Blueprint("optimization", __name__)
 

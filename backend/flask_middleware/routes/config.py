@@ -3,6 +3,11 @@ import os
 from services.config_service import save_configuration_service, load_configuration_service, get_chain_filters_service, \
     get_svgs_service, execute_service, init_service, stop_service, get_logs_service
 
+# config_routes.py
+# Defines API endpoints for configuration management, including saving/loading configs,
+# initializing, executing, stopping simulations, importing CSV files, and retrieving logs/SVGs.
+
+
 CONFIG_DIRECTORY = "./configurations"
 SAVED_CONFIGS_DIRECTORY = CONFIG_DIRECTORY + "/saved"
 LOADED_CONFIGS_DIRECTORY = CONFIG_DIRECTORY + "/loaded"

@@ -1,6 +1,8 @@
 import scgms_wrapper
 
 from services.filter_service import filter_info_to_dict
+# config_service.py
+# Provides service-level logic for configuration management, simulation execution, SVG and log retrieval,
 
 def init_service():
     scgms_wrapper.init_config()

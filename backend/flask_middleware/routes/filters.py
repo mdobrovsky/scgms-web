@@ -29,6 +29,11 @@ def remove_filter():
     return jsonify({"result": result})
 
 
+# filters_routes.py
+# Provides API endpoints for managing filter chain: listing available filters, adding, removing,
+# reordering, and configuring filters used in SCGMS experiments.
+
+
 @filters_bp.route("/move_up", methods=["POST"])
 def move_filter_up():
     data = request.get_json()

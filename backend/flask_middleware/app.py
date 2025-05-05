@@ -10,6 +10,9 @@ from routes.config import config_bp
 from routes.models import models_bp
 from routes.solvers import solvers_bp
 from routes.library import library_bp
+# main.py
+# Entry point for the Flask backend server. Registers all API route blueprints and enables CORS for cross-origin requests.
+
 app = Flask(__name__)
 CORS(app)
 
