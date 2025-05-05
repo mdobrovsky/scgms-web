@@ -85,6 +85,18 @@ def get_logs():
 
 @config_bp.route("/execute", methods=["GET"])
 def execute():
+    filters = get_chain_filters_service()
+    print(filters)
+    # check if there is replay log filter and if its csv is imported
+    for f in filters:
+        if f["description"] == "CSV File Log Replay":
+            for p in f["parameters"]:
+                if p["config_parameter_name"] == "Log_File":
+                    csv_file = p["value"]
+                    if not os.path.exists(csv_file):
+                        print(f"CSV file {csv_file} not found")
+                        return jsonify({"result": f"CSV file {csv_file} not found"})
+
     result = execute_service()
     return jsonify({"result": result})
 
@@ -106,8 +118,13 @@ def import_csv_files():
     for csv_file in csv_files:
         print("csv_file: ", csv_file)
         csv_file_name = csv_file.filename
-        csv_file_path = os.path.join("./", csv_file_name)
-        csv_file.save(csv_file_path)
+        data = csv_file.read()
+
+        with open(os.path.join("./", csv_file_name), "wb") as f:
+            f.write(data)
+
+        with open(os.path.join(LOADED_CONFIGS_DIRECTORY, csv_file_name), "wb") as f:
+            f.write(data)
 
     return jsonify({"result": "0"})
 
