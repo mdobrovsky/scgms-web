@@ -60,6 +60,18 @@ function MainPage() {
         logsRef.current = logs;
     }, [logs]);
 
+    useEffect(() => {
+        const fetchData = async () => {
+            const svgs = await fetchSvgs();
+            const logs = await fetchLogs();
+            setSvgs(svgs);
+            setLogs(logs);
+        };
+
+        fetchData();
+    }, []);
+
+
 
     useEffect(() => {
         fetchFilters().then(data => {
